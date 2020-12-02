@@ -14,9 +14,9 @@ library(ezknitr)
 #' 
 #' Read in the data for Wisconsin
 #' 
-WI_COND<-read.csv("data/main_WI_2020/WI_COND.csv")#read the condition table
-WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
-WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_COND<-read.csv("data/main_WI_2020/WI_COND.csv", na.strings = "NA")#read the condition table
+WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
+WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
 #'
 #'
 #' Subset for ONE county (COUNTYCD =1) and just keep records from 2000 on
@@ -60,12 +60,38 @@ WI_TP$ID<- paste(WI_TP$INVYR, WI_TP$PLOT, WI_TP$SUBP, WI_TP$TREE, sep="_")
 #'
 #' #' #### 1.2 Classify tree diameters into 5" classes (for pilot, just 1 county, the max DIA is 29.4"). Update values when using other counties
 #' 
-WI_TP$DIA_CLASS<- ifelse(WI_TP$DIA < 5, "[0-5>",
-                         ifelse(WI_TP$DIA>=5 & WI_TP$DIA <10, "[5-10>",
-                                ifelse(WI_TP$DIA>=10 & WI_TP$DIA <15, "[10-15>",
-                                       ifelse(WI_TP$DIA>=15 & WI_TP$DIA <20, "[15-20>",
-                                              ifelse(WI_TP$DIA>=20 & WI_TP$DIA <25, "[20-25>",
-                                       "[25-30>")))))
+#' First filter out diameters less than 5" (those correspond to the microplot)
+#'
+WI_TP <- WI_TP %>% filter( DIA >= 5) #filter out trees that correspond to microplot
+#'
+#'##########################
+#'
+#' Create a for loop that will classify diameters into diameter classes every 5". Range of diameters in Wisconsin is 5-90"
+#' 
+sequenceDIA<- seq(from=5, to=90, by=5) #create a sequence from 5 to 90 that will be used in the loop
+#'
+WI_TP$DIA_CLASS<- 0 #create an empty column for diameter class
+#'
+WI_TP$MIN_DIA<- 0 #create an empty column for the lower end of the diameter class
+WI_TP$MAX_DIA<- 0 #create an empty column for the upper end of the diameter class
+#'
+#'
+for(i in 1:length(sequenceDIA)){
+  temp=sequenceDIA[i]
+  for(j in 1:nrow(WI_TP)){
+    if(WI_TP$DIA[j] >= temp & WI_TP$DIA[j]<(temp+5)
+    ){WI_TP$MIN_DIA[j]=temp
+    WI_TP$MAX_DIA[j]=temp+5
+    WI_TP$DIA_CLASS[j] = paste("[",temp,"-",(temp+5),">")
+        }}}
+#'
+#' Alternative code to do it with an ifelse statement instead of a for loop
+#' 
+#WI_TP$DIA_CLASS<- ifelse(ifelse(WI_TP$DIA>=5 & WI_TP$DIA <10, "[5-10>",
+#                                ifelse(WI_TP$DIA>=10 & WI_TP$DIA <15, "[10-15>",
+#                                       ifelse(WI_TP$DIA>=15 & WI_TP$DIA <20, "[15-20>",
+#                                              ifelse(WI_TP$DIA>=20 & WI_TP$DIA <25, "[20-25>",
+#                                       "[25-30>")))))
 #'
 #' #' #### 1.3 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each subplot
 #' 
@@ -80,29 +106,51 @@ DIST_SUBP$N_DIST_TREES <- ifelse (DIST_SUBP$AGENTCD != "NA", DIST_SUBP$N_TREES_D
 #' 
 colnames(DIST_SUBP)[5] <- "DIST_TYPE"
 #'
+#' Fill the NAs for disturbance types and number of disturbed trees with zeros
+#'
+DIST_SUBP$N_DIST_TREES[is.na(DIST_SUBP$N_DIST_TREES)] <- 0 # Filling the missing values with zeros
+DIST_SUBP$DIST_TYPE[is.na(DIST_SUBP$DIST_TYPE)] <- 0 # Filling the missing values with zeros
+#'
 #' Look at our output
 #' 
 head(DIST_SUBP, 10)
 #'
+#' This table is the one to be used for LANDIS purposes
+#' 
 ###################################################################################
 #' # DISTURBANCE VARIABLE COMPARISON
+#' 
+#' Tables created here are just for comparing the two disturbances variables. To differentiate the variables, we will call "diffused disturbance" to the disturbance variable created from the tree table. The original disturbance variable from the condition table will be called "condition disturbance". This variable has a 25% threshold, meaning that if the condition in the subplot has >=25% of the trees affected by a disturbance and more than 1 acre in size, it will be recorded as such, otherwise, it won't show as a disturbance
 #'
 #' ## Create a disturbance variable per subplot per condid
 #' 
 #' ### 1. Prepare the table
-#' 
+#'
+#' First filter out diameters less than 5" (those correspond to the microplot)
+#'
+WI_TCP <- WI_TCP %>% filter( DIA >= 5) #filter out trees that correspond to microplot
+#'
 #' #### 1.1 Create a unique identifier ID with invyr_plot_subplot_tree
 #' 
 WI_TCP$ID<- paste(WI_TCP$INVYR, WI_TCP$PLOT, WI_TCP$SUBP, WI_TCP$CONDID,WI_TCP$TREE, sep="_")
 #'
-#' #' #### 1.2 Classify tree diameters into 5" classes (for pilot, just 1 county, the max DIA is 29.4"). Update values when using other counties
+#' #' #### 1.2 Classify tree diameters into 5" classes. Update sequenceDIA values when using other States
 #' 
-WI_TCP$DIA_CLASS<- ifelse(WI_TCP$DIA < 5, "[0-5>",
-                         ifelse(WI_TCP$DIA>=5 & WI_TCP$DIA <10, "[5-10>",
-                                ifelse(WI_TCP$DIA>=10 & WI_TCP$DIA <15, "[10-15>",
-                                       ifelse(WI_TCP$DIA>=15 & WI_TCP$DIA <20, "[15-20>",
-                                              ifelse(WI_TCP$DIA>=20 & WI_TCP$DIA <25, "[20-25>",
-                                                     "[25-30>")))))
+sequenceDIA<- seq(from=5, to=90, by=5) #create a sequence from 5 to 90 that will be used in the loop
+#'
+WI_TCP$DIA_CLASS<- 0 #create an empty column for diameter class
+#'
+WI_TCP$MIN_DIA<- 0 #create an empty column for the lower end of the diameter class
+WI_TCP$MAX_DIA<- 0 #create an empty column for the upper end of the diameter class
+#'
+for(i in 1:length(sequenceDIA)){
+  temp=sequenceDIA[i]
+  for(j in 1:nrow(WI_TCP)){
+    if(WI_TCP$DIA[j] >= temp & WI_TCP$DIA[j]<(temp+5)
+    ){WI_TCP$MIN_DIA[j]=temp
+    WI_TCP$MAX_DIA[j]=temp+5
+    WI_TCP$DIA_CLASS[j] = paste("[",temp,"-",(temp+5),">")
+    }}}
 #'
 #' #' #### 1.3 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each subplot
 #' 
@@ -121,7 +169,7 @@ colnames(DIST_SUBP_CONDID)[6] <- "DIST_TYPE"
 #' 
 head(DIST_SUBP_CONDID, 10)
 #'
-#' Now create a column that calculates the proportion of trees that were afected by a disturbance per condition in each plot
+#' Now create a column that calculates the proportion of trees that were affected by a disturbance per condition in each plot
 #' 
 #' For the purposes of counting the disturbances and trees affected by it, replace NA's with CEROS
 #' 
@@ -145,6 +193,10 @@ disturbances_tree<- merge(dist_condid,condid, by=c("INVYR", "PLOT", "CONDID")) %
   mutate(proportion=(trees_dist/trees_tot)*100)
 #'
 head(disturbances_tree,15)
+#'
+#' Now we have created the proportion of trees affected by each disturbance. For comparison purposes, we will filter out everything under 25% (to make it comparable with the disturbance condition variable)
+#'
+disturbances_tree<- disturbances_tree %>% filter(proportion>=25)
 #'
 #'
 ###################################################################################
@@ -170,9 +222,27 @@ head(cont_table_COND,15)
 #'
 #' This disturbance variable identifies disturbances that affect 25% or more of trees in the condition
 #'
-#' ### 2. Prepare the tree table ###ADD COUNTY CODE!, double check issues wit repetitions in subplot level
+#' ### 2. Prepare the tree table ###ADD COUNTY CODE!, double check issues with repetitions in subplot level
+#'
+#' If it is a single disturbance = SD, compound disturbances = CD, no disturbance = ND
+#'
+#'##################WORKING ON THIS NOW
+#disturbances_tree$DIST <- ifelse(disturbances_tree #
+                                 
+#                                 $DSTRBCD1 != 0 & WI_CP$DSTRBCD2 == 0, "SD",
+#                     ifelse(WI_CP$DSTRBCD1 != 0 & WI_CP$DSTRBCD2 != 0 ,"CD","ND"))
+#'
+#' Now let's estimate the number of plots disturbed and not disturbed. To do this, create a contingency table
 #' 
-#' Scale up to calculate proportion of disturbed plots at a plot level
+#cont_table_COND<- WI_CP %>% group_by(DIST) %>%
+#  summarise(n_plots=n())
+#'
+#head(cont_table_COND,15)
+#' 
+#' ####################
+#'
+#'
+#' Scale up to calculate proportion of disturbed plots at a plot level #ERRASE
 #' 
 #WI_DIST<- DIST_SUBP #create a duplicate of the dataset
 #WI_DIST$DIST<- ifelse(WI_DIST$DIST_TYPE!= 0, 1,0) #create a variable for presence or absence of disturbance
