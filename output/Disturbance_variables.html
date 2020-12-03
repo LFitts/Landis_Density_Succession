@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Installing and loading the libraries needed</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+<!-- Styles for R syntax highlighter -->
+<style type="text/css">
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: #990073
+   }
+
+   pre .number {
+     color: #099;
+   }
+
+   pre .comment {
+     color: #998;
+     font-style: italic
+   }
+
+   pre .keyword {
+     color: #900;
+     font-weight: bold
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: #d14;
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<pre><code class="r"># Preparing the dataset for Wisconsin ----
+###################################################################################
+</code></pre>
+
+<h3>Installing and loading the libraries needed</h3>
+
+<pre><code class="r">#Install.packages(&quot;tidyverse&quot;)
+#Install.packages(&quot;knitr&quot;)
+#Install.packages(&quot;ezknit&quot;)
+library(tidyverse)
+library(knitr)
+library(ezknitr)
+###################################################################################
+</code></pre>
+
+<h1>1. Read in the FIA data for the state of Wisconsin</h1>
+
+<p>Read in the data for Wisconsin</p>
+
+<pre><code class="r">WI_COND&lt;-read.csv(&quot;data/main_WI_2020/WI_COND.csv&quot;, na.strings = &quot;NA&quot;)#read the condition table
+WI_PLOT&lt;-read.csv(&quot;data/main_WI_2020/WI_PLOT.csv&quot;, na.strings = &quot;NA&quot;)#read the plot table
+WI_TREE&lt;-read.csv(&quot;data/main_WI_2020/WI_TREE.csv&quot;, na.strings = &quot;NA&quot;)#read the tree table
+</code></pre>
+
+<p>Subset for ONE county (COUNTYCD =1) and just keep records from 2000 on</p>
+
+<pre><code class="r">WI_COND1&lt;-subset(WI_COND, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+WI_PLOT1&lt;-subset(WI_PLOT, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+WI_TREE1&lt;-subset(WI_TREE, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+</code></pre>
+
+<p>Keep each identifier record different before combining tables</p>
+
+<pre><code class="r">colnames(WI_PLOT1)[1]&lt;-&quot;PLT_CN&quot;
+colnames(WI_COND1)[1]&lt;-&quot;COND_CN&quot;
+colnames(WI_TREE1)[1]&lt;-&quot;TREE_CN&quot;
+</code></pre>
+
+<p>Select variables of interest for each table</p>
+
+<pre><code class="r">WI_COND1 &lt;- select(WI_COND1, PLT_CN, INVYR, STATECD, COUNTYCD, PLOT,COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3)
+WI_PLOT1 &lt;- select(WI_PLOT1, PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE)
+WI_TREE1 &lt;- select(WI_TREE1, TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP,CONDID, TREE, STATUSCD, SPCD, SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG)
+</code></pre>
+
+<p>Merge the tables</p>
+
+<pre><code class="r">WI_CP&lt;-merge(WI_PLOT1, WI_COND1, by=c(&quot;STATECD&quot;,&quot;COUNTYCD&quot;,&quot;PLOT&quot;,&quot;INVYR&quot;, &quot;PLT_CN&quot;)) #merge the plot and condition tables
+</code></pre>
+
+<pre><code class="r">WI_TP&lt;- merge(WI_TREE1, WI_PLOT1, by=c(&quot;STATECD&quot;,&quot;COUNTYCD&quot;,&quot;PLOT&quot;,&quot;INVYR&quot;, &quot;PLT_CN&quot;)) #merge tree and plot tables
+</code></pre>
+
+<pre><code class="r">WI_TC&lt;- merge(WI_TREE1, WI_COND1, by=c(&quot;STATECD&quot;,&quot;COUNTYCD&quot;,&quot;PLOT&quot;,&quot;INVYR&quot;, &quot;CONDID&quot; ,&quot;PLT_CN&quot;)) #merge the Tree and condition tables
+</code></pre>
+
+<pre><code class="r">WI_TCP&lt;- merge(WI_TC, WI_PLOT1, by=c(&quot;STATECD&quot;,&quot;COUNTYCD&quot;,&quot;PLOT&quot;,&quot;INVYR&quot;, &quot;PLT_CN&quot;)) #merge the three tables
+</code></pre>
+
+<pre><code class="r">###################################################################################
+</code></pre>
+
+<h2>Create a disturbance variable per subplot</h2>
+
+<h3>1. Prepare the table</h3>
+
+<h4>1.1 Create a unique identifier ID with invyr_plot_subplot_tree</h4>
+
+<pre><code class="r">WI_TP$ID&lt;- paste(WI_TP$INVYR, WI_TP$PLOT, WI_TP$SUBP, WI_TP$TREE, sep=&quot;_&quot;)
+</code></pre>
+
+<p>#&#39; #### 1.2 Classify tree diameters into 5&quot; classes (for pilot, just 1 county, the max DIA is 29.4&quot;). Update values when using other counties</p>
+
+<p>First filter out diameters less than 5&quot; (those correspond to the microplot)</p>
+
+<pre><code class="r">WI_TP &lt;- WI_TP %&gt;% filter( DIA &gt;= 5) #filter out trees that correspond to microplot
+</code></pre>
+
+<p>##########################</p>
+
+<p>Create a for loop that will classify diameters into diameter classes every 5&quot;. Range of diameters in Wisconsin is 5-90&quot;</p>
+
+<pre><code class="r">sequenceDIA&lt;- seq(from=5, to=90, by=5) #create a sequence from 5 to 90 that will be used in the loop
+</code></pre>
+
+<pre><code class="r">WI_TP$DIA_CLASS&lt;- 0 #create an empty column for diameter class
+</code></pre>
+
+<pre><code class="r">WI_TP$MIN_DIA&lt;- 0 #create an empty column for the lower end of the diameter class
+WI_TP$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter class
+</code></pre>
+
+<pre><code class="r">for(i in 1:length(sequenceDIA)){
+  temp=sequenceDIA[i]
+  for(j in 1:nrow(WI_TP)){
+    if(WI_TP$DIA[j] &gt;= temp &amp; WI_TP$DIA[j]&lt;(temp+5)
+    ){WI_TP$MIN_DIA[j]=temp
+    WI_TP$MAX_DIA[j]=temp+5
+    WI_TP$DIA_CLASS[j] = paste(&quot;[&quot;,temp,&quot;-&quot;,(temp+5),&quot;&gt;&quot;)
+        }}}
+</code></pre>
+
+<p>Alternative code to do it with an ifelse statement instead of a for loop</p>
+
+<pre><code class="r">#WI_TP$DIA_CLASS&lt;- ifelse(ifelse(WI_TP$DIA&gt;=5 &amp; WI_TP$DIA &lt;10, &quot;[5-10&gt;&quot;,
+#                                ifelse(WI_TP$DIA&gt;=10 &amp; WI_TP$DIA &lt;15, &quot;[10-15&gt;&quot;,
+#                                       ifelse(WI_TP$DIA&gt;=15 &amp; WI_TP$DIA &lt;20, &quot;[15-20&gt;&quot;,
+#                                              ifelse(WI_TP$DIA&gt;=20 &amp; WI_TP$DIA &lt;25, &quot;[20-25&gt;&quot;,
+#                                       &quot;[25-30&gt;&quot;)))))
+</code></pre>
+
+<p>#&#39; #### 1.3 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each subplot</p>
+
+<pre><code class="r">DIST_SUBP&lt;- WI_TP %&gt;% group_by(INVYR, PLOT, SUBP, DIA_CLASS, AGENTCD)%&gt;% #Agent of mortality will be our disturbance variable
+  summarise( N_TREES_DIA= n())
+</code></pre>
+
+<p>Add a new column indicating just the number of trees disturbed in each diameter class</p>
+
+<pre><code class="r">DIST_SUBP$N_DIST_TREES &lt;- ifelse (DIST_SUBP$AGENTCD != &quot;NA&quot;, DIST_SUBP$N_TREES_DIA, &quot;NA&quot;)
+</code></pre>
+
+<p>Rename AGENTCD variable to DIST_TYPE</p>
+
+<pre><code class="r">colnames(DIST_SUBP)[5] &lt;- &quot;DIST_TYPE&quot;
+</code></pre>
+
+<p>Fill the NAs for disturbance types and number of disturbed trees with zeros</p>
+
+<pre><code class="r">DIST_SUBP$N_DIST_TREES[is.na(DIST_SUBP$N_DIST_TREES)] &lt;- 0 # Filling the missing values with zeros
+DIST_SUBP$DIST_TYPE[is.na(DIST_SUBP$DIST_TYPE)] &lt;- 0 # Filling the missing values with zeros
+</code></pre>
+
+<p>Look at our output</p>
+
+<pre><code class="r">head(DIST_SUBP, 10)
+</code></pre>
+
+<pre><code>## # A tibble: 10 x 7
+## # Groups:   INVYR, PLOT, SUBP, DIA_CLASS [9]
+##    INVYR  PLOT  SUBP DIA_CLASS   DIST_TYPE N_TREES_DIA N_DIST_TREES
+##    &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;chr&gt;           &lt;dbl&gt;       &lt;int&gt;        &lt;dbl&gt;
+##  1  2000 20032     3 [ 15 - 20 &gt;        70           1            1
+##  2  2000 20032     3 [ 15 - 20 &gt;         0           2            0
+##  3  2000 20032     3 [ 5 - 10 &gt;          0           8            0
+##  4  2000 20032     4 [ 5 - 10 &gt;          0           6            0
+##  5  2000 20040     1 [ 10 - 15 &gt;         0           4            0
+##  6  2000 20040     1 [ 15 - 20 &gt;         0           1            0
+##  7  2000 20040     2 [ 5 - 10 &gt;         70           1            1
+##  8  2000 20040     3 [ 10 - 15 &gt;         0           4            0
+##  9  2000 20040     4 [ 10 - 15 &gt;         0           7            0
+## 10  2000 20040     4 [ 5 - 10 &gt;          0           2            0
+</code></pre>
+
+<p>This table is the one to be used for LANDIS purposes</p>
+
+<pre><code class="r">###################################################################################
+</code></pre>
+
+<h1>DISTURBANCE VARIABLE COMPARISON</h1>
+
+<p>Tables created here are just for comparing the two disturbances variables. To differentiate the variables, we will call &ldquo;diffused disturbance&rdquo; to the disturbance variable created from the tree table. The original disturbance variable from the condition table will be called &ldquo;condition disturbance&rdquo;. This variable has a 25% threshold, meaning that if the condition in the subplot has &gt;=25% of the trees affected by a disturbance and more than 1 acre in size, it will be recorded as such, otherwise, it won&#39;t show as a disturbance</p>
+
+<h2>Create a disturbance variable per subplot per condid</h2>
+
+<h3>1. Prepare the table</h3>
+
+<p>First filter out diameters less than 5&quot; (those correspond to the microplot)</p>
+
+<pre><code class="r">WI_TCP &lt;- WI_TCP %&gt;% filter( DIA &gt;= 5) #filter out trees that correspond to microplot
+</code></pre>
+
+<h4>1.1 Create a unique identifier ID with invyr_plot_subplot_tree</h4>
+
+<pre><code class="r">WI_TCP$ID&lt;- paste(WI_TCP$INVYR, WI_TCP$PLOT, WI_TCP$SUBP, WI_TCP$CONDID,WI_TCP$TREE, sep=&quot;_&quot;)
+</code></pre>
+
+<p>#&#39; #### 1.2 Classify tree diameters into 5&quot; classes. Update sequenceDIA values when using other States</p>
+
+<pre><code class="r">sequenceDIA&lt;- seq(from=5, to=90, by=5) #create a sequence from 5 to 90 that will be used in the loop
+</code></pre>
+
+<pre><code class="r">WI_TCP$DIA_CLASS&lt;- 0 #create an empty column for diameter class
+</code></pre>
+
+<pre><code class="r">WI_TCP$MIN_DIA&lt;- 0 #create an empty column for the lower end of the diameter class
+WI_TCP$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter class
+</code></pre>
+
+<pre><code class="r">for(i in 1:length(sequenceDIA)){
+  temp=sequenceDIA[i]
+  for(j in 1:nrow(WI_TCP)){
+    if(WI_TCP$DIA[j] &gt;= temp &amp; WI_TCP$DIA[j]&lt;(temp+5)
+    ){WI_TCP$MIN_DIA[j]=temp
+    WI_TCP$MAX_DIA[j]=temp+5
+    WI_TCP$DIA_CLASS[j] = paste(&quot;[&quot;,temp,&quot;-&quot;,(temp+5),&quot;&gt;&quot;)
+    }}}
+</code></pre>
+
+<p>#&#39; #### 1.3 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each subplot</p>
+
+<pre><code class="r">DIST_SUBP_CONDID&lt;- WI_TCP %&gt;% group_by(INVYR, PLOT, SUBP, CONDID,DIA_CLASS, AGENTCD)%&gt;% #Agent of mortality will be our disturbance variable
+  summarise( N_TREES_DIA= n())
+</code></pre>
+
+<p>Add a new column indicating just the number of trees disturbed in each diameter class</p>
+
+<pre><code class="r">DIST_SUBP_CONDID$N_DIST_TREES &lt;- ifelse (DIST_SUBP_CONDID$AGENTCD != &quot;NA&quot;, DIST_SUBP_CONDID$N_TREES_DIA, &quot;NA&quot;)
+</code></pre>
+
+<p>Rename AGENTCD variable to DIST_TYPE</p>
+
+<pre><code class="r">colnames(DIST_SUBP_CONDID)[6] &lt;- &quot;DIST_TYPE&quot;
+</code></pre>
+
+<p>Look at our output</p>
+
+<pre><code class="r">head(DIST_SUBP_CONDID, 10)
+</code></pre>
+
+<pre><code>## # A tibble: 10 x 8
+## # Groups:   INVYR, PLOT, SUBP, CONDID, DIA_CLASS [9]
+##    INVYR  PLOT  SUBP CONDID DIA_CLASS   DIST_TYPE N_TREES_DIA N_DIST_TREES
+##    &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;int&gt; &lt;chr&gt;           &lt;int&gt;       &lt;int&gt;        &lt;int&gt;
+##  1  2000 20032     3      2 [ 15 - 20 &gt;        70           1            1
+##  2  2000 20032     3      2 [ 15 - 20 &gt;        NA           2           NA
+##  3  2000 20032     3      2 [ 5 - 10 &gt;         NA           8           NA
+##  4  2000 20032     4      2 [ 5 - 10 &gt;         NA           6           NA
+##  5  2000 20040     1      1 [ 10 - 15 &gt;        NA           4           NA
+##  6  2000 20040     1      1 [ 15 - 20 &gt;        NA           1           NA
+##  7  2000 20040     2      2 [ 5 - 10 &gt;         70           1            1
+##  8  2000 20040     3      1 [ 10 - 15 &gt;        NA           4           NA
+##  9  2000 20040     4      1 [ 10 - 15 &gt;        NA           7           NA
+## 10  2000 20040     4      1 [ 5 - 10 &gt;         NA           2           NA
+</code></pre>
+
+<p>Now create a column that calculates the proportion of trees that were affected by a disturbance per condition in each plot</p>
+
+<p>For the purposes of counting the disturbances and trees affected by it, replace NA&#39;s with CEROS</p>
+
+<pre><code class="r">DIST_SUBP_CONDID$DIST_TYPE[is.na(DIST_SUBP_CONDID$DIST_TYPE)] &lt;- 0 #fill NA&#39;s with ceros
+</code></pre>
+
+<pre><code class="r">DIST_SUBP_CONDID$N_DIST_TREES[is.na(DIST_SUBP_CONDID$N_DIST_TREES)] &lt;- 0 #fill NA&#39;s with ceros
+</code></pre>
+
+<p>Group by inventory year, plot, condition id and disturbance type to calculate the number of disturbed trees   </p>
+
+<pre><code class="r">dist_condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(INVYR,PLOT,CONDID, DIST_TYPE)%&gt;%
+  summarise(trees_dist= sum(N_DIST_TREES))
+</code></pre>
+
+<p>Group by inventory year, plot, and condition id to calculate the number of trees</p>
+
+<pre><code class="r">condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(INVYR,PLOT,CONDID)%&gt;%
+  summarise(trees_tot= sum(N_TREES_DIA))
+</code></pre>
+
+<p>Now merge back the two tables and calculate the proportion of disturbed trees per condition id</p>
+
+<pre><code class="r">disturbances_tree&lt;- merge(dist_condid,condid, by=c(&quot;INVYR&quot;, &quot;PLOT&quot;, &quot;CONDID&quot;)) %&gt;%
+  mutate(proportion=(trees_dist/trees_tot)*100)
+</code></pre>
+
+<pre><code class="r">head(disturbances_tree,15)
+</code></pre>
+
+<pre><code>##    INVYR  PLOT CONDID DIST_TYPE trees_dist trees_tot proportion
+## 1   2000 20032      2         0          0        17   0.000000
+## 2   2000 20032      2        70          1        17   5.882353
+## 3   2000 20040      1         0          0        23   0.000000
+## 4   2000 20040      2        70          1         1 100.000000
+## 5   2000 20071      1         0          0        11   0.000000
+## 6   2000 20079      2         0          0         4   0.000000
+## 7   2000 20092      1         0          0        19   0.000000
+## 8   2000 20092      1        70          1        19   5.263158
+## 9   2000 20106      1         0          0        39   0.000000
+## 10  2000 20106      1        70          7        39  17.948718
+## 11  2000 20179      1         0          0        37   0.000000
+## 12  2000 20179      1        70          5        37  13.513514
+## 13  2000 20196      1         0          0        22   0.000000
+## 14  2000 20196      1        70          4        22  18.181818
+## 15  2000 20196      2         0          0         9   0.000000
+</code></pre>
+
+<p>Now we have created the proportion of trees affected by each disturbance. For comparison purposes, we will filter out everything under 25% (to make it comparable with the disturbance condition variable)</p>
+
+<pre><code class="r">disturbances_tree&lt;- disturbances_tree %&gt;% filter(proportion&gt;=25)
+</code></pre>
+
+<pre><code class="r">###################################################################################
+</code></pre>
+
+<h2>Now, let&#39;s compare is this new variable works better at capturing disturbances</h2>
+
+<p>For doing this, we will compare the original &#39;condition-level disturbance variable&#39; (COND_DIST) with the &#39;tree-level disturbance variable&#39; (TREE_DIST) through a X<sup>2</sup> test.
+There will be three categories in each variable: not disturbed (ND), simple disturbance (SD), and compound disturbance (CD)</p>
+
+<h3>1. Prepare the condition table</h3>
+
+<p>First create an ID for each plot</p>
+
+<pre><code class="r">WI_CP$ID&lt;- paste(WI_CP$STATECD, WI_CP$COUNTYCD, WI_CP$PLOT, WI_CP$INVYR, sep=&quot;_&quot;)
+</code></pre>
+
+<p>If it is a single disturbance (SD) = 1, compound disturbances (CD) = 2, no disturbance (ND) = 0</p>
+
+<pre><code class="r">WI_CP$DIST &lt;- ifelse(WI_CP$DSTRBCD1 != 0 &amp; WI_CP$DSTRBCD2 == 0, 1,
+                               ifelse(WI_CP$DSTRBCD1 != 0 &amp; WI_CP$DSTRBCD2 != 0 ,2,0))
+</code></pre>
+
+<p>Now let&#39;s estimate the number of plots disturbed and not disturbed. To do this, create a contingency table</p>
+
+<p>By condition per plot</p>
+
+<p>First let&#39;s scale up to a plot level</p>
+
+<pre><code class="r">plot_WI_CP&lt;- WI_CP %&gt;% group_by(ID) %&gt;% 
+  summarise (disturbance = sum(DIST, na.rm=T)) 
+</code></pre>
+
+<p>The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value &gt;1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND</p>
+
+<p>Now standardize the names ND=0, SD=1, CD &gt;=2</p>
+
+<pre><code class="r">plot_WI_CP$disturbance &lt;- ifelse(plot_WI_CP$disturbance == 0, &quot;ND&quot;,
+                     ifelse(plot_WI_CP$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))  
+</code></pre>
+
+<pre><code class="r">cont_table_COND&lt;- plot_WI_CP %&gt;% group_by(disturbance) %&gt;% #################MAYBE FILL OUT WITH ZEROS FOR NA so we have the same number of plots
+  summarise(n_plots=n())
+</code></pre>
+
+<p>By plot</p>
+
+<pre><code class="r">#cont_table_COND&lt;- WI_CP %&gt;% group_by(DIST) %&gt;%
+#  summarise(n_plots=n()) #get the number of plots per grouped category/disturbance type
+</code></pre>
+
+<pre><code class="r">head(cont_table_COND,15)
+</code></pre>
+
+<pre><code>## # A tibble: 3 x 2
+##   disturbance n_plots
+##   &lt;chr&gt;         &lt;int&gt;
+## 1 CD                1
+## 2 ND              517
+## 3 SD               18
+</code></pre>
+
+<p>This disturbance variable identifies disturbances that affect 25% or more of trees in the condition</p>
+
+<p>########################################################################################</p>
+
+<h3>2. Prepare the tree table ###ADD COUNTY CODE!, double check issues with repetitions in subplot level</h3>
+
+<p>First create an ID for each plot</p>
+
+<pre><code class="r">disturbances_tree$ID&lt;- paste(disturbances_tree$PLOT, disturbances_tree$INVYR, sep=&quot;_&quot;)
+</code></pre>
+
+<p>Now create a loop that will generate a column that numbers the disturbances each time it finds a repeated ID</p>
+
+<pre><code class="r"># As the new column “ID” has repeated occurrences, let&#39;s create a vector “vec” that will hold the unique items of ID (this will be used inside the loop to find unique occurrences)
+</code></pre>
+
+<pre><code class="r">vec&lt;-unique(disturbances_tree$ID)
+</code></pre>
+
+<pre><code class="r">disturbances_tree$DSTRBCD&lt;-0 #create a column to store the numbers for disturbances occurrences 
+</code></pre>
+
+<pre><code class="r">for(i in 1:length(vec)){
+  tempkey=vec[i]
+  counter=1
+  for(j in 1:nrow(disturbances_tree)){
+    if(disturbances_tree$ID[j]==tempkey){
+      disturbances_tree$DSTRBCD[j]=counter
+      counter=counter+1
+    }
+  }
+}
+</code></pre>
+
+<p>Now convert the table to a wide format to identify the presence of simple vs compound disturbances</p>
+
+<pre><code class="r">disturbancesTreeTable &lt;- disturbances_tree %&gt;% select(ID, INVYR, PLOT, CONDID, DIST_TYPE, DSTRBCD)%&gt;%
+  pivot_wider(names_from = DSTRBCD, values_from = DIST_TYPE) #convert to a wide format to identify compound disturbances
+</code></pre>
+
+<p>Rename columns names (1,2 to dist1, dist2)</p>
+
+<pre><code class="r">disturbancesTreeTable&lt;-disturbancesTreeTable %&gt;% 
+  rename( &quot;dist1&quot;=&quot;1&quot;,
+    &quot;dist2&quot;=&quot;2&quot;) #we will use disturbances 1 and 2 from now on, as if there is 2+ disturbances, it will already be considered a compound disturbance
+</code></pre>
+
+<p>Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)</p>
+
+<pre><code class="r">disturbancesTreeTable$dist1[is.na(disturbancesTreeTable$dist1)] &lt;- 0 #fill NA&#39;s with ceros
+disturbancesTreeTable$dist2[is.na(disturbancesTreeTable$dist2)] &lt;- 0 #fill NA&#39;s with ceros
+</code></pre>
+
+<pre><code class="r">disturbancesTreeTable$DIST &lt;- ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 == 0, &quot;SD&quot;,
+                   ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 != 0 ,&quot;CD&quot;,&quot;ND&quot;))
+</code></pre>
+
+<pre><code class="r">cont_table_TREE&lt;- disturbancesTreeTable %&gt;% group_by(DIST) %&gt;% #################MAYBE FILL OUT WITH ZEROS FOR NA so we have the same number of plots
+  summarise(n_plots=n())
+</code></pre>
+
+<p>####################</p>
+
+<p>Spun using:</p>
+
+<p>ezspin(&ldquo;code/Disturbance_variables.R&rdquo;, out_dir = &ldquo;output&rdquo;, keep_md=FALSE) </p>
+
+</body>
+
+</html>
