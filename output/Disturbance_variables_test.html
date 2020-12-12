@@ -216,7 +216,7 @@ library(ezknitr)
 
 ###################################################################################
 
-# 1. Read in the FIA data for the state of Wisconsin ----
+# Read in the FIA data for the state of Wisconsin ----
 </code></pre>
 
 <p>Read in the data for Wisconsin</p>
@@ -267,7 +267,7 @@ WI_TREE1 &lt;- select(WI_TREE1, TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, 
 <pre><code class="r"># Landis disturbance variable ----
 </code></pre>
 
-<h2>1. Create a disturbance variable per subplot</h2>
+<h2>1. LANDIS Create a disturbance variable per subplot</h2>
 
 <h3>1.1 Prepare the table</h3>
 
@@ -366,6 +366,25 @@ DIST_SUBP$DIST_TYPE[is.na(DIST_SUBP$DIST_TYPE)] &lt;- 0 # Filling the missing va
 
 <p>Tables created here are just for comparing the two disturbances variables. To differentiate the variables, we will call &ldquo;diffused disturbance&rdquo; to the disturbance variable created from the tree table. The original disturbance variable from the condition table will be called &ldquo;condition disturbance&rdquo;. This variable has a 25% threshold, meaning that if the condition in the subplot has &gt;=25% of the trees affected by a disturbance and more than 1 acre in size, it will be recorded as such, otherwise, it won&#39;t show as a disturbance</p>
 
+<p>Starting dataset: WI_TCP </p>
+
+<pre><code class="r">WI_TCP &lt;- WI_TCP%&gt;% filter( DIA &gt;= 5) #filter out trees that correspond to microplot
+</code></pre>
+
+<pre><code class="r">WI_TCP[is.na(WI_TCP)] &lt;- 0 #fill NA&#39;s with zeros
+</code></pre>
+
+<p>Create an ID</p>
+
+<pre><code class="r">WI_TCP$ID&lt;- paste(WI_TCP$STATECD, WI_TCP$COUNTYCD, WI_TCP$PLOT, WI_TCP$INVYR, sep=&quot;_&quot;)
+</code></pre>
+
+<pre><code class="r">nrow(unique(WI_TCP))
+</code></pre>
+
+<pre><code>## [1] 7487
+</code></pre>
+
 <pre><code class="r">###################################################################################
 # Condition disturbance table ----
 </code></pre>
@@ -375,24 +394,22 @@ DIST_SUBP$DIST_TYPE[is.na(DIST_SUBP$DIST_TYPE)] &lt;- 0 # Filling the missing va
 <p>For doing this, we will compare the original &#39;condition-level disturbance variable&#39; (COND_DIST) with the &#39;tree-level disturbance variable&#39; (TREE_DIST) through a X<sup>2</sup> test.
 There will be three categories in each variable: not disturbed (ND), simple disturbance (SD), and compound disturbance (CD)</p>
 
-<h3>2. Prepare the condition table</h3>
-
-<p>First create an ID for each plot</p>
-
-<pre><code class="r">WI_CP$ID&lt;- paste(WI_CP$STATECD, WI_CP$COUNTYCD, WI_CP$PLOT, WI_CP$INVYR, sep=&quot;_&quot;)
+<pre><code class="r">WI_TCP2 &lt;-WI_TCP
 </code></pre>
+
+<h3>2. Prepare the condition table</h3>
 
 <p>If it is a single disturbance (SD) = 1, compound disturbances (CD) = 2, no disturbance (ND) = 0</p>
 
-<pre><code class="r">WI_CP$DIST &lt;- ifelse(WI_CP$DSTRBCD1 != 0 &amp; WI_CP$DSTRBCD2 == 0, 1,
-                     ifelse(WI_CP$DSTRBCD1 != 0 &amp; WI_CP$DSTRBCD2 != 0 ,2,0))
+<pre><code class="r">WI_TCP2$DIST &lt;- ifelse(WI_TCP2$DSTRBCD1 != 0 &amp; WI_TCP2$DSTRBCD2 == 0, 1,
+                     ifelse(WI_TCP2$DSTRBCD1 != 0 &amp; WI_TCP2$DSTRBCD2 != 0 ,2,0))
 </code></pre>
 
 <p>Now let&#39;s estimate the number of plots disturbed and not disturbed. To do this, create a contingency table</p>
 
 <p>First let&#39;s scale up to a plot level</p>
 
-<pre><code class="r">plot_WI_CP&lt;- WI_CP %&gt;% group_by(ID) %&gt;% 
+<pre><code class="r">plot_WI_CP&lt;- WI_TCP2 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
   summarise (disturbance = sum(DIST, na.rm=T)) 
 </code></pre>
 
@@ -414,9 +431,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
-## 1 CD                1
-## 2 ND              517
-## 3 SD               18
+## 1 CD               14
+## 2 ND              305
+## 3 SD                1
 </code></pre>
 
 <p>This disturbance variable identifies disturbances that affect 25% or more of trees in the condition</p>
@@ -432,52 +449,47 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 
 <h3>3.1. Prepare the table</h3>
 
-<p>First filter out diameters less than 5&quot; (those correspond to the microplot)</p>
-
-<pre><code class="r">WI_TCP &lt;- WI_TCP %&gt;% filter( DIA &gt;= 5) #filter out trees that correspond to microplot
+<pre><code class="r">WI_TCP3 &lt;-WI_TCP
 </code></pre>
 
 <h4>Create a unique identifier ID with invyr_plot_subplot_tree</h4>
-
-<pre><code class="r">WI_TCP$ID&lt;- paste(WI_TCP$STATECD, WI_TCP$COUNTYCD, WI_TCP$PLOT, WI_TCP$INVYR, WI_TCP$SUBP, WI_TCP$CONDID,WI_TCP$TREE, sep=&quot;_&quot;)
-</code></pre>
 
 <h4>Classify tree diameters into 5&quot; classes. Update sequenceDIA values when using other States. WI tree species have a DBH up to 90&quot;</h4>
 
 <pre><code class="r">sequenceDIA&lt;- seq(from=5, to=90, by=5) #create a sequence from 5 to 90 that will be used in the loop
 </code></pre>
 
-<pre><code class="r">WI_TCP$DIA_CLASS&lt;- 0 #create an empty column for diameter class
+<pre><code class="r">WI_TCP3$DIA_CLASS&lt;- 0 #create an empty column for diameter class
 </code></pre>
 
-<pre><code class="r">WI_TCP$MIN_DIA&lt;- 0 #create an empty column for the lower end of the diameter class
-WI_TCP$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter class
+<pre><code class="r">WI_TCP3$MIN_DIA&lt;- 0 #create an empty column for the lower end of the diameter class
+WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter class
 </code></pre>
 
 <pre><code class="r">for(i in 1:length(sequenceDIA)){
   temp=sequenceDIA[i]
-  for(j in 1:nrow(WI_TCP)){
-    if(WI_TCP$DIA[j] &gt;= temp &amp; WI_TCP$DIA[j]&lt;(temp+5)
-    ){WI_TCP$MIN_DIA[j]=temp
-    WI_TCP$MAX_DIA[j]=temp+5
-    WI_TCP$DIA_CLASS[j] = paste(&quot;[&quot;,temp,&quot;-&quot;,(temp+5),&quot;&gt;&quot;)
+  for(j in 1:nrow(WI_TCP3)){
+    if(WI_TCP3$DIA[j] &gt;= temp &amp; WI_TCP3$DIA[j]&lt;(temp+5)
+    ){WI_TCP3$MIN_DIA[j]=temp
+    WI_TCP3$MAX_DIA[j]=temp+5
+    WI_TCP3$DIA_CLASS[j] = paste(&quot;[&quot;,temp,&quot;-&quot;,(temp+5),&quot;&gt;&quot;)
     }}}
 </code></pre>
 
 <h4>3.2 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each subplot</h4>
 
-<pre><code class="r">DIST_SUBP_CONDID&lt;- WI_TCP %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, SUBP, CONDID,DIA_CLASS, AGENTCD)%&gt;% #Agent of mortality will be our disturbance variable
+<pre><code class="r">DIST_SUBP_CONDID&lt;- WI_TCP3 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID,AGENTCD)%&gt;% #Agent of mortality will be our disturbance variable
   summarise( N_TREES_DIA= n())
 </code></pre>
 
 <p>Add a new column indicating just the number of trees disturbed in each diameter class</p>
 
-<pre><code class="r">DIST_SUBP_CONDID$N_DIST_TREES &lt;- ifelse (DIST_SUBP_CONDID$AGENTCD != &quot;NA&quot;, DIST_SUBP_CONDID$N_TREES_DIA, &quot;NA&quot;)
+<pre><code class="r">DIST_SUBP_CONDID$N_DIST_TREES &lt;- ifelse (DIST_SUBP_CONDID$AGENTCD == 0, 0, DIST_SUBP_CONDID$N_TREES_DIA)
 </code></pre>
 
 <p>Rename AGENTCD variable to DIST_TYPE</p>
 
-<pre><code class="r">colnames(DIST_SUBP_CONDID)[8] &lt;- &quot;DIST_TYPE&quot;
+<pre><code class="r">colnames(DIST_SUBP_CONDID)[7] &lt;- &quot;DIST_TYPE&quot;
 </code></pre>
 
 <p>Look at our output</p>
@@ -485,105 +497,84 @@ WI_TCP$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter 
 <pre><code class="r">head(DIST_SUBP_CONDID, 10)
 </code></pre>
 
-<pre><code>## # A tibble: 10 x 10
-## # Groups:   STATECD, COUNTYCD, PLOT, INVYR, SUBP, CONDID, DIA_CLASS [9]
-##    STATECD COUNTYCD  PLOT INVYR  SUBP CONDID DIA_CLASS  DIST_TYPE N_TREES_DIA N_DIST_TREES
-##      &lt;int&gt;    &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;int&gt; &lt;chr&gt;          &lt;int&gt;       &lt;int&gt;        &lt;int&gt;
-##  1      55        1 10349  2004     1      1 [ 10 - 15~        NA           3           NA
-##  2      55        1 10349  2004     2      1 [ 5 - 10 &gt;        NA           1           NA
-##  3      55        1 10349  2004     3      1 [ 10 - 15~        NA           1           NA
-##  4      55        1 10349  2004     4      1 [ 5 - 10 &gt;        NA           3           NA
-##  5      55        1 10349  2009     1      1 [ 10 - 15~        70           1            1
-##  6      55        1 10349  2009     1      1 [ 10 - 15~        NA           2           NA
-##  7      55        1 10349  2009     2      1 [ 5 - 10 &gt;        NA           2           NA
-##  8      55        1 10349  2009     3      1 [ 10 - 15~        20           1            1
-##  9      55        1 10349  2009     4      1 [ 5 - 10 &gt;        NA           2           NA
-## 10      55        1 10350  2004     1      1 [ 10 - 15~        NA           2           NA
+<pre><code>## # A tibble: 10 x 9
+## # Groups:   STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID [8]
+##    STATECD COUNTYCD  PLOT INVYR CONDID ID              DIST_TYPE N_TREES_DIA N_DIST_TREES
+##      &lt;int&gt;    &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;int&gt; &lt;chr&gt;               &lt;dbl&gt;       &lt;int&gt;        &lt;dbl&gt;
+##  1      55        1 10349  2004      1 55_1_10349_2004         0           8            0
+##  2      55        1 10349  2009      1 55_1_10349_2009         0           6            0
+##  3      55        1 10349  2009      1 55_1_10349_2009        20           1            1
+##  4      55        1 10349  2009      1 55_1_10349_2009        70           1            1
+##  5      55        1 10350  2004      1 55_1_10350_2004         0          14            0
+##  6      55        1 10350  2009      1 55_1_10350_2009         0          14            0
+##  7      55        1 10350  2014      1 55_1_10350_2014         0          16            0
+##  8      55        1 10351  2014      1 55_1_10351_2014         0          27            0
+##  9      55        1 10352  2007      1 55_1_10352_2007         0           1            0
+## 10      55        1 10352  2012      1 55_1_10352_2012         0           2            0
 </code></pre>
 
 <p>Now create a column that calculates the proportion of trees that were affected by a disturbance per condition in each plot</p>
 
-<p>For the purposes of counting the disturbances and trees affected by it, replace NA&#39;s with ZEROS</p>
-
-<pre><code class="r">DIST_SUBP_CONDID$DIST_TYPE[is.na(DIST_SUBP_CONDID$DIST_TYPE)] &lt;- 0 #fill NA&#39;s with zeros
-</code></pre>
-
-<pre><code class="r">DIST_SUBP_CONDID$N_DIST_TREES[is.na(DIST_SUBP_CONDID$N_DIST_TREES)] &lt;- 0 #fill NA&#39;s with zeros
-</code></pre>
-
 <p>Group by inventory year, plot, condition id and disturbance type to calculate the number of disturbed trees. (We are regrouping the diameter classes, now it will be reflected per condid)   </p>
 
-<pre><code class="r">dist_condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR,CONDID, DIST_TYPE)%&gt;%
+<pre><code class="r">dist_condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR,CONDID, ID ,DIST_TYPE)%&gt;%
   summarise(trees_dist= sum(N_DIST_TREES))
 </code></pre>
 
 <p>Group by inventory year, plot, and condition id to calculate the total number of trees per condid</p>
 
-<pre><code class="r">condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID)%&gt;%
+<pre><code class="r">condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID)%&gt;%
   summarise(trees_tot= sum(N_TREES_DIA))
 </code></pre>
 
 <p>Now merge back the two tables and calculate the proportion of disturbed trees per condition id</p>
 
-<pre><code class="r">disturbances_tree&lt;- merge(dist_condid,condid, by=c(&quot;STATECD&quot;, &quot;COUNTYCD&quot;, &quot;PLOT&quot;, &quot;INVYR&quot;, &quot;CONDID&quot;)) %&gt;%
+<pre><code class="r">disturbances_tree&lt;- merge(dist_condid,condid, by=c(&quot;STATECD&quot;, &quot;COUNTYCD&quot;, &quot;PLOT&quot;, &quot;INVYR&quot;, &quot;CONDID&quot;, &quot;ID&quot;)) %&gt;%
   mutate(proportion=(trees_dist/trees_tot)*100)
 </code></pre>
 
 <pre><code class="r">head(disturbances_tree,15)
 </code></pre>
 
-<pre><code>##    STATECD COUNTYCD  PLOT INVYR CONDID DIST_TYPE trees_dist trees_tot proportion
-## 1       55        1 10349  2004      1         0          0         8   0.000000
-## 2       55        1 10349  2009      1         0          0         8   0.000000
-## 3       55        1 10349  2009      1        20          1         8  12.500000
-## 4       55        1 10349  2009      1        70          1         8  12.500000
-## 5       55        1 10350  2004      1         0          0        14   0.000000
-## 6       55        1 10350  2009      1         0          0        14   0.000000
-## 7       55        1 10350  2014      1         0          0        16   0.000000
-## 8       55        1 10351  2014      1         0          0        27   0.000000
-## 9       55        1 10352  2007      1         0          0         1   0.000000
-## 10      55        1 10352  2012      1         0          0         2   0.000000
-## 11      55        1 10352  2019      1         0          0         6   0.000000
-## 12      55        1 20001  2001      1         0          0        40   0.000000
-## 13      55        1 20001  2006      1         0          0        45   0.000000
-## 14      55        1 20001  2011      1         0          0        47   0.000000
-## 15      55        1 20001  2011      1        70          3        47   6.382979
+<pre><code>##    STATECD COUNTYCD  PLOT INVYR CONDID              ID DIST_TYPE trees_dist trees_tot proportion
+## 1       55        1 10349  2004      1 55_1_10349_2004         0          0         8   0.000000
+## 2       55        1 10349  2009      1 55_1_10349_2009         0          0         8   0.000000
+## 3       55        1 10349  2009      1 55_1_10349_2009        20          1         8  12.500000
+## 4       55        1 10349  2009      1 55_1_10349_2009        70          1         8  12.500000
+## 5       55        1 10350  2004      1 55_1_10350_2004         0          0        14   0.000000
+## 6       55        1 10350  2009      1 55_1_10350_2009         0          0        14   0.000000
+## 7       55        1 10350  2014      1 55_1_10350_2014         0          0        16   0.000000
+## 8       55        1 10351  2014      1 55_1_10351_2014         0          0        27   0.000000
+## 9       55        1 10352  2007      1 55_1_10352_2007         0          0         1   0.000000
+## 10      55        1 10352  2012      1 55_1_10352_2012         0          0         2   0.000000
+## 11      55        1 10352  2019      1 55_1_10352_2019         0          0         6   0.000000
+## 12      55        1 20001  2001      1 55_1_20001_2001         0          0        40   0.000000
+## 13      55        1 20001  2006      1 55_1_20001_2006         0          0        45   0.000000
+## 14      55        1 20001  2011      1 55_1_20001_2011         0          0        47   0.000000
+## 15      55        1 20001  2011      1 55_1_20001_2011        70          3        47   6.382979
 </code></pre>
 
-<p>Now that we have the proportion of trees affected by each disturbance, we will make this table comparable with the condition disturbance variable. For that, reclassify every disturbance &gt;=25% to disturbed and the ones &lt;25% as not disturbed.</p>
-
-<pre><code class="r">disturbances_tree$DSTRCD&lt;- ifelse(disturbances_tree$proportion &gt;= 25, disturbances_tree$DIST_TYPE, 0 )
+<pre><code class="r">length(unique(disturbances_tree$ID)) #total number of plots 320, matches the plot_WI_CP
 </code></pre>
 
-<p>Select the variables we want to keep</p>
-
-<pre><code class="r">disturbances_tree&lt;-disturbances_tree%&gt;% select(STATECD, COUNTYCD, PLOT, INVYR,CONDID,DSTRCD)
+<pre><code>## [1] 320
 </code></pre>
 
-<p>Now as we converted all the disturbances &lt;25 to &ldquo;non-disturbed plots&rdquo;, we have repeated observations. Let&#39;s remove them</p>
+<p>####################################################################################</p>
 
-<pre><code class="r">disturbances_tree$ID &lt;- paste(disturbances_tree$STATECD, disturbances_tree$COUNTYCD, disturbances_tree$PLOT, disturbances_tree$INVYR, disturbances_tree$CONDID, disturbances_tree$DSTRCD, sep=&quot;_&quot;)
+<pre><code class="r"># Diffused variable no proportion threshold ----
 </code></pre>
 
-<pre><code class="r">#disturbances_tree$ID &lt;- paste(disturbances_tree$STATECD, disturbances_tree$COUNTYCD, disturbances_tree$PLOT, disturbances_tree$INVYR, disturbances_tree$CONDID, sep=&quot;_&quot;)
+<p>####################################################################################</p>
+
+<h2>4. All diffused disturbance</h2>
+
+<p>Create an ID for each condition per plot</p>
+
+<pre><code class="r">disturbances_tree$IDC &lt;- paste(disturbances_tree$STATECD, disturbances_tree$COUNTYCD, disturbances_tree$PLOT, disturbances_tree$INVYR, disturbances_tree$CONDID, sep=&quot;_&quot;)
 </code></pre>
 
-<pre><code class="r">disturbances_tree &lt;- unique(disturbances_tree)
-</code></pre>
-
-<h3>3.3 Prepare the tree table</h3>
-
-<p>Now create a loop that will generate a column that numbers the disturbances each time it finds a repeated ID</p>
-
-<p>For the loop to work as expected, remove the last portion of the ID column (corresponding to the disturbance), so that the loop can find repeated observations for each plot using the ID</p>
-
-<pre><code class="r">disturbances_tree$ID&lt;-substr(disturbances_tree$ID, 1,17) #the values I want to keep
-</code></pre>
-
-<pre><code class="r"># As the new column “ID” has repeated occurrences, let&#39;s create a vector “vec” that will hold the unique items of ID (this will be used inside the loop to find unique occurrences)
-</code></pre>
-
-<pre><code class="r">vec&lt;-unique(disturbances_tree$ID)
+<pre><code class="r">vec&lt;-unique(disturbances_tree$IDC)
 </code></pre>
 
 <pre><code class="r">disturbances_tree$Dcode&lt;-0 #create a column to store the numbers for disturbances occurrences 
@@ -591,14 +582,14 @@ WI_TCP$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter 
 
 <p>Order the disturbance codes so the disturbances will be coded first</p>
 
-<pre><code class="r">disturbances_tree&lt;-disturbances_tree[order(disturbances_tree$DSTRCD, decreasing=T),]
+<pre><code class="r">disturbances_tree&lt;-disturbances_tree[order(disturbances_tree$DIST_TYPE, decreasing=T),]
 </code></pre>
 
 <pre><code class="r">for(i in 1:length(vec)){
   tempkey=vec[i]
   counter=1
   for(j in 1:nrow(disturbances_tree)){
-    if(disturbances_tree$ID[j]==tempkey){
+    if(disturbances_tree$IDC[j]==tempkey){
       disturbances_tree$Dcode[j]=counter
       counter=counter+1
     }
@@ -606,33 +597,31 @@ WI_TCP$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter 
 }
 </code></pre>
 
-<pre><code class="r">#disturbances_tree2&lt;- disturbances_tree[,-7]
-</code></pre>
-
 <p>Now convert the table to a wide format to identify the presence of simple vs compound disturbances</p>
 
 <pre><code class="r">disturbancesTreeTable &lt;- disturbances_tree %&gt;%
-  pivot_wider(names_from = Dcode, values_from = DSTRCD) #convert to a wide format to identify compound disturbances
+  pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
 </code></pre>
 
 <p>Rename columns names (1,2 to dist1, dist2) #CHECK CODE WITH MORE COUNTIES. IN COUNTY1 THERE ARE NO COMPOUND DISTURBANCES</p>
 
 <pre><code class="r">disturbancesTreeTable&lt;-disturbancesTreeTable %&gt;% 
   rename( &quot;dist1&quot;=&quot;1&quot;,
-    &quot;dist2&quot;=&quot;2&quot;) #we will use disturbances 1 and 2 from now on, as if there is 2+ disturbances, it will already be considered a compound disturbance
+          &quot;dist2&quot;=&quot;2&quot;,
+          &quot;dist3&quot;=&quot;3&quot;,
+          &quot;dist4&quot;=&quot;4&quot;) #we will use disturbances 1 and 2 from now on, as if there is 2+ disturbances, it will already be considered a compound disturbance
 </code></pre>
 
 <p>Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)</p>
 
-<pre><code class="r">disturbancesTreeTable$dist1[is.na(disturbancesTreeTable$dist1)] &lt;- 0 #fill NA&#39;s with zeros
-disturbancesTreeTable$dist2[is.na(disturbancesTreeTable$dist2)] &lt;- 0 #fill NA&#39;s with zeros
+<pre><code class="r">disturbancesTreeTable[is.na(disturbancesTreeTable)] &lt;- 0 #fill NA&#39;s with zeros
 </code></pre>
 
 <pre><code class="r">disturbancesTreeTable$DIST &lt;- ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 == 0, 1,
-                                                        ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 != 0 ,2,0))
+                                     ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 != 0 ,2,0))
 </code></pre>
 
-<pre><code class="r">tree_dist&lt;- disturbancesTreeTable %&gt;% group_by(ID) %&gt;% 
+<pre><code class="r">tree_dist&lt;- disturbancesTreeTable %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
   summarise (disturbance = sum(DIST, na.rm=T))
 </code></pre>
 
@@ -641,7 +630,7 @@ disturbancesTreeTable$dist2[is.na(disturbancesTreeTable$dist2)] &lt;- 0 #fill NA
 <p>Now standardize the names ND=0, SD=1, CD &gt;=2</p>
 
 <pre><code class="r">tree_dist$disturbance &lt;- ifelse(tree_dist$disturbance == 0, &quot;ND&quot;,
-                                 ifelse(tree_dist$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))
+                                ifelse(tree_dist$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))
 </code></pre>
 
 <pre><code class="r">cont_table_TREE&lt;- tree_dist %&gt;% group_by(disturbance) %&gt;%
@@ -654,8 +643,105 @@ disturbancesTreeTable$dist2[is.na(disturbancesTreeTable$dist2)] &lt;- 0 #fill NA
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
+## 1 CD               40
+## 2 ND              176
+## 3 SD              104
+</code></pre>
+
+<p>####################################################################################</p>
+
+<pre><code class="r"># Diffused variable 25% threshold ----
+</code></pre>
+
+<p>####################################################################################</p>
+
+<h2>5. Diffused disturbance proportion 25% or higher</h2>
+
+<p>Now that we have the proportion of trees affected by each disturbance, we will make this table comparable with the condition disturbance variable. For that, reclassify every disturbance &gt;=25% to disturbed and the ones &lt;25% as not disturbed.</p>
+
+<pre><code class="r">disturbances_tree25&lt;- merge(dist_condid,condid, by=c(&quot;STATECD&quot;, &quot;COUNTYCD&quot;, &quot;PLOT&quot;, &quot;INVYR&quot;, &quot;CONDID&quot;, &quot;ID&quot;)) %&gt;%
+  mutate(proportion=(trees_dist/trees_tot)*100)
+</code></pre>
+
+<pre><code class="r">disturbances_tree25$DIST_TYPE&lt;- ifelse(disturbances_tree25$proportion &gt;= 25, disturbances_tree25$DIST_TYPE, 0 )
+</code></pre>
+
+<p>Create an ID for each condition per plot</p>
+
+<pre><code class="r">disturbances_tree25$IDC &lt;- paste(disturbances_tree25$STATECD, disturbances_tree25$COUNTYCD, disturbances_tree25$PLOT, disturbances_tree25$INVYR, disturbances_tree25$CONDID, sep=&quot;_&quot;)
+</code></pre>
+
+<pre><code class="r">vec&lt;-unique(disturbances_tree25$IDC)
+</code></pre>
+
+<pre><code class="r">disturbances_tree25$Dcode&lt;-0 #create a column to store the numbers for disturbances occurrences 
+</code></pre>
+
+<p>Order the disturbance codes so the disturbances will be coded first</p>
+
+<pre><code class="r">disturbances_tree25&lt;-disturbances_tree25[order(disturbances_tree25$DIST_TYPE, decreasing=T),]
+</code></pre>
+
+<pre><code class="r">for(i in 1:length(vec)){
+  tempkey=vec[i]
+  counter=1
+  for(j in 1:nrow(disturbances_tree25)){
+    if(disturbances_tree25$IDC[j]==tempkey){
+      disturbances_tree25$Dcode[j]=counter
+      counter=counter+1
+    }
+  }
+}
+</code></pre>
+
+<p>Now convert the table to a wide format to identify the presence of simple vs compound disturbances</p>
+
+<pre><code class="r">disturbancesTreeTable25 &lt;- disturbances_tree25 %&gt;%
+  pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
+</code></pre>
+
+<p>Rename columns names (1,2 to dist1, dist2) #CHECK CODE WITH MORE COUNTIES. IN COUNTY1 THERE ARE NO COMPOUND DISTURBANCES</p>
+
+<pre><code class="r">disturbancesTreeTable25&lt;-disturbancesTreeTable25 %&gt;% 
+  rename( &quot;dist1&quot;=&quot;1&quot;,
+          &quot;dist2&quot;=&quot;2&quot;,
+          &quot;dist3&quot;=&quot;3&quot;,
+          &quot;dist4&quot;=&quot;4&quot;) #we will use disturbances 1 and 2 from now on, as if there is 2+ disturbances, it will already be considered a compound disturbance
+</code></pre>
+
+<p>Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)</p>
+
+<pre><code class="r">disturbancesTreeTable25[is.na(disturbancesTreeTable25)] &lt;- 0 #fill NA&#39;s with zeros
+</code></pre>
+
+<pre><code class="r">disturbancesTreeTable25$DIST &lt;- ifelse(disturbancesTreeTable25$dist1 != 0 &amp; disturbancesTreeTable25$dist2 == 0, 1,
+                                     ifelse(disturbancesTreeTable25$dist1 != 0 &amp; disturbancesTreeTable25$dist2 != 0 ,2,0))
+</code></pre>
+
+<pre><code class="r">tree_dist25&lt;- disturbancesTreeTable25 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
+  summarise (disturbance = sum(DIST, na.rm=T))
+</code></pre>
+
+<p>The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value &gt;1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND</p>
+
+<p>Now standardize the names ND=0, SD=1, CD &gt;=2</p>
+
+<pre><code class="r">tree_dist25$disturbance &lt;- ifelse(tree_dist25$disturbance == 0, &quot;ND&quot;,
+                                ifelse(tree_dist25$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))
+</code></pre>
+
+<pre><code class="r">cont_table_TREE25&lt;- tree_dist25 %&gt;% group_by(disturbance) %&gt;%
+  summarise(n_plots=n())
+</code></pre>
+
+<pre><code class="r">cont_table_TREE25
+</code></pre>
+
+<pre><code>## # A tibble: 3 x 2
+##   disturbance n_plots
+##   &lt;chr&gt;         &lt;int&gt;
 ## 1 CD                1
-## 2 ND              355
+## 2 ND              304
 ## 3 SD               15
 </code></pre>
 
@@ -663,7 +749,7 @@ disturbancesTreeTable$dist2[is.na(disturbancesTreeTable$dist2)] &lt;- 0 #fill NA
 
 <p>Spun using:</p>
 
-<p>ezspin(&ldquo;code/Disturbance_variables.R&rdquo;, out_dir = &ldquo;output&rdquo;, keep_md=FALSE) </p>
+<p>ezspin(&ldquo;code/Disturbance_variables_test.R&rdquo;, out_dir = &ldquo;output&rdquo;, keep_md=FALSE) </p>
 
 </body>
 
