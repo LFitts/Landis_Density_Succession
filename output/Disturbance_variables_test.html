@@ -399,30 +399,53 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 
 <h3>2. Prepare the condition table</h3>
 
-<p>If it is a single disturbance (SD) = 1, compound disturbances (CD) = 2, no disturbance (ND) = 0</p>
-
-<pre><code class="r">WI_TCP2$DIST &lt;- ifelse(WI_TCP2$DSTRBCD1 != 0 &amp; WI_TCP2$DSTRBCD2 == 0, 1,
-                     ifelse(WI_TCP2$DSTRBCD1 != 0 &amp; WI_TCP2$DSTRBCD2 != 0 ,2,0))
-</code></pre>
-
-<p>Now let&#39;s estimate the number of plots disturbed and not disturbed. To do this, create a contingency table</p>
-
 <p>First let&#39;s scale up to a plot level</p>
 
-<pre><code class="r">plot_WI_CP&lt;- WI_TCP2 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
-  summarise (disturbance = sum(DIST, na.rm=T)) 
+<p>Convert to long format</p>
+
+<pre><code class="r">plot_WI_CP &lt;- WI_TCP2 %&gt;% pivot_longer(DSTRBCD1:DSTRBCD3,names_to=&quot;DSTRBCD&quot; , values_to=&quot;DIST&quot;)
 </code></pre>
 
-<p>The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value &gt;1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND</p>
+<p>Get unique observations for the dataset</p>
+
+<pre><code class="r">plot_WI_CP &lt;- plot_WI_CP %&gt;% select(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID, DSTRBCD, DIST) #select variables of interest
+</code></pre>
+
+<pre><code class="r">plot_WI_CP&lt;- unique(plot_WI_CP) #unique observations for the dataset   
+</code></pre>
+
+<p>Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a disturbance</p>
+
+<pre><code class="r">plot_WI_CP$dist_count &lt;- ifelse(plot_WI_CP$DIST != 0, 1,0) 
+</code></pre>
+
+<p>Scaling to a plot level  </p>
+
+<pre><code class="r">plot_WI_CP&lt;- plot_WI_CP %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %&gt;% 
+  summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from all the conditions in a plot. We might have a disturbance spreading on more than 1 condition
+</code></pre>
+
+<p>Keep single disturbance records per plot</p>
+
+<pre><code class="r">plot_WI_CP$disturbance&lt;- ifelse(plot_WI_CP$disturbance != 0,1,0)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+</code></pre>
+
+<p>Now we can scale up to a plot level:</p>
+
+<pre><code class="r">plot_WI_CP&lt;- plot_WI_CP %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
+  summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
+</code></pre>
+
+<p>The logic here is that plots that were affected by more than one disturbance type (CD) will be represented with value &gt;1 for the sum of disturbances (We already took care of repeated disturbance types per plot in the previous step). A value of 1 represents SD and a value of 0 represents ND</p>
 
 <p>Now standardize the names ND=0, SD=1, CD &gt;=2</p>
 
-<pre><code class="r">plot_WI_CP$disturbance &lt;- ifelse(plot_WI_CP$disturbance == 0, &quot;ND&quot;,
-                                 ifelse(plot_WI_CP$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))  
+<pre><code class="r">plot_WI_CP$disturbance &lt;- ifelse(plot_WI_CP$disturbance_sum == 0, &quot;ND&quot;,
+                                 ifelse(plot_WI_CP$disturbance_sum == 1 , &quot;SD&quot;, &quot;CD&quot;))  
 </code></pre>
 
 <pre><code class="r">cont_table_COND&lt;- plot_WI_CP %&gt;% group_by(disturbance) %&gt;%
-  summarise(n_plots=n()) #get the number of plots per grouped category/disturbance type
+  summarise(n_plots=n()) #get the number of plots per grouped category/disturbance type (SD, CD, ND)
 </code></pre>
 
 <pre><code class="r">cont_table_COND
@@ -431,9 +454,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
-## 1 CD               14
+## 1 CD                1
 ## 2 ND              305
-## 3 SD                1
+## 3 SD               14
 </code></pre>
 
 <p>This disturbance variable identifies disturbances that affect 25% or more of trees in the condition</p>
@@ -452,31 +475,7 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code class="r">WI_TCP3 &lt;-WI_TCP
 </code></pre>
 
-<h4>Create a unique identifier ID with invyr_plot_subplot_tree</h4>
-
-<h4>Classify tree diameters into 5&quot; classes. Update sequenceDIA values when using other States. WI tree species have a DBH up to 90&quot;</h4>
-
-<pre><code class="r">sequenceDIA&lt;- seq(from=5, to=90, by=5) #create a sequence from 5 to 90 that will be used in the loop
-</code></pre>
-
-<pre><code class="r">WI_TCP3$DIA_CLASS&lt;- 0 #create an empty column for diameter class
-</code></pre>
-
-<pre><code class="r">WI_TCP3$MIN_DIA&lt;- 0 #create an empty column for the lower end of the diameter class
-WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter class
-</code></pre>
-
-<pre><code class="r">for(i in 1:length(sequenceDIA)){
-  temp=sequenceDIA[i]
-  for(j in 1:nrow(WI_TCP3)){
-    if(WI_TCP3$DIA[j] &gt;= temp &amp; WI_TCP3$DIA[j]&lt;(temp+5)
-    ){WI_TCP3$MIN_DIA[j]=temp
-    WI_TCP3$MAX_DIA[j]=temp+5
-    WI_TCP3$DIA_CLASS[j] = paste(&quot;[&quot;,temp,&quot;-&quot;,(temp+5),&quot;&gt;&quot;)
-    }}}
-</code></pre>
-
-<h4>3.2 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each subplot</h4>
+<h4>3.2 Use the group_by and summarise functions to create a table containing disturbances per diameter class in each condition</h4>
 
 <pre><code class="r">DIST_SUBP_CONDID&lt;- WI_TCP3 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID,AGENTCD)%&gt;% #Agent of mortality will be our disturbance variable
   summarise( N_TREES_DIA= n())
@@ -515,7 +514,7 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 
 <p>Now create a column that calculates the proportion of trees that were affected by a disturbance per condition in each plot</p>
 
-<p>Group by inventory year, plot, condition id and disturbance type to calculate the number of disturbed trees. (We are regrouping the diameter classes, now it will be reflected per condid)   </p>
+<p>Group by inventory year, plot, condition id and disturbance type to calculate the number of disturbed trees.   </p>
 
 <pre><code class="r">dist_condid&lt;-DIST_SUBP_CONDID %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR,CONDID, ID ,DIST_TYPE)%&gt;%
   summarise(trees_dist= sum(N_DIST_TREES))
@@ -569,12 +568,14 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 
 <h2>4. All diffused disturbance</h2>
 
+<h4>4.1 Create a loop to number the disturbances that show in each condition (to keep multiple disturbances)</h4>
+
 <p>Create an ID for each condition per plot</p>
 
 <pre><code class="r">disturbances_tree$IDC &lt;- paste(disturbances_tree$STATECD, disturbances_tree$COUNTYCD, disturbances_tree$PLOT, disturbances_tree$INVYR, disturbances_tree$CONDID, sep=&quot;_&quot;)
 </code></pre>
 
-<pre><code class="r">vec&lt;-unique(disturbances_tree$IDC)
+<pre><code class="r">vec&lt;-unique(disturbances_tree$IDC) #vector to use in the loop
 </code></pre>
 
 <pre><code class="r">disturbances_tree$Dcode&lt;-0 #create a column to store the numbers for disturbances occurrences 
@@ -603,13 +604,13 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
   pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
 </code></pre>
 
-<p>Rename columns names (1,2 to dist1, dist2) #CHECK CODE WITH MORE COUNTIES. IN COUNTY1 THERE ARE NO COMPOUND DISTURBANCES</p>
+<p>Rename columns names (1,2&hellip; to dist1, dist2&hellip;)</p>
 
 <pre><code class="r">disturbancesTreeTable&lt;-disturbancesTreeTable %&gt;% 
   rename( &quot;dist1&quot;=&quot;1&quot;,
           &quot;dist2&quot;=&quot;2&quot;,
           &quot;dist3&quot;=&quot;3&quot;,
-          &quot;dist4&quot;=&quot;4&quot;) #we will use disturbances 1 and 2 from now on, as if there is 2+ disturbances, it will already be considered a compound disturbance
+          &quot;dist4&quot;=&quot;4&quot;)
 </code></pre>
 
 <p>Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)</p>
@@ -617,23 +618,61 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 <pre><code class="r">disturbancesTreeTable[is.na(disturbancesTreeTable)] &lt;- 0 #fill NA&#39;s with zeros
 </code></pre>
 
-<pre><code class="r">disturbancesTreeTable$DIST &lt;- ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 == 0, 1,
-                                     ifelse(disturbancesTreeTable$dist1 != 0 &amp; disturbancesTreeTable$dist2 != 0 ,2,0))
+<pre><code class="r">head(disturbancesTreeTable)
 </code></pre>
 
-<pre><code class="r">tree_dist&lt;- disturbancesTreeTable %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
-  summarise (disturbance = sum(DIST, na.rm=T))
+<pre><code>## # A tibble: 6 x 10
+##   STATECD COUNTYCD  PLOT INVYR CONDID IDC               dist1 dist2 dist3 dist4
+##     &lt;int&gt;    &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;int&gt; &lt;chr&gt;             &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1      55        1 10349  2009      1 55_1_10349_2009_1    70    20     0     0
+## 2      55        1 20001  2011      1 55_1_20001_2011_1    70     0     0     0
+## 3      55        1 20007  2007      1 55_1_20007_2007_1    70     0     0     0
+## 4      55        1 20007  2018      1 55_1_20007_2018_1    70    20     0     0
+## 5      55        1 20012  2015      1 55_1_20012_2015_1    70     0     0     0
+## 6      55        1 20026  2001      1 55_1_20026_2001_1    70     0     0     0
+</code></pre>
+
+<p>This table resembles the condition table with how disturbances are recorded per condid</p>
+
+<p>#### 4.2 Now let&#39;s scale up to a plot level (do same steps as in section 2 condition table creation)</p>
+
+<p>Convert to long format</p>
+
+<pre><code class="r">disturbancesTreeTable &lt;- disturbancesTreeTable %&gt;% pivot_longer(dist1:dist4,names_to=&quot;DSTRBCD&quot; , values_to=&quot;DIST&quot;)
+</code></pre>
+
+<p>Get unique observations for the dataset</p>
+
+<pre><code class="r">disturbancesTreeTable &lt;- unique(disturbancesTreeTable) #make sure we have unique observations for the dataset   
+</code></pre>
+
+<p>Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a specific disturbance</p>
+
+<pre><code class="r">disturbancesTreeTable$dist_count &lt;- ifelse(disturbancesTreeTable$DIST != 0, 1,0) 
+</code></pre>
+
+<pre><code class="r">disturbancesTreeTable&lt;- disturbancesTreeTable %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %&gt;% 
+  summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from each condition in a plot
+</code></pre>
+
+<pre><code class="r">disturbancesTreeTable$disturbance&lt;- ifelse(disturbancesTreeTable$disturbance != 0,1,0)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+</code></pre>
+
+<p>Now we can scale up to a plot level:</p>
+
+<pre><code class="r">disturbancesTreeTable&lt;- disturbancesTreeTable %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
+  summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
 </code></pre>
 
 <p>The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value &gt;1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND</p>
 
 <p>Now standardize the names ND=0, SD=1, CD &gt;=2</p>
 
-<pre><code class="r">tree_dist$disturbance &lt;- ifelse(tree_dist$disturbance == 0, &quot;ND&quot;,
-                                ifelse(tree_dist$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))
+<pre><code class="r">disturbancesTreeTable$disturbance &lt;- ifelse(disturbancesTreeTable$disturbance_sum == 0, &quot;ND&quot;,
+                                 ifelse(disturbancesTreeTable$disturbance_sum == 1 , &quot;SD&quot;, &quot;CD&quot;))  
 </code></pre>
 
-<pre><code class="r">cont_table_TREE&lt;- tree_dist %&gt;% group_by(disturbance) %&gt;%
+<pre><code class="r">cont_table_TREE&lt;- disturbancesTreeTable %&gt;% group_by(disturbance) %&gt;%
   summarise(n_plots=n())
 </code></pre>
 
@@ -643,9 +682,9 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
-## 1 CD               40
+## 1 CD               37
 ## 2 ND              176
-## 3 SD              104
+## 3 SD              107
 </code></pre>
 
 <p>####################################################################################</p>
@@ -660,7 +699,7 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 <p>Now that we have the proportion of trees affected by each disturbance, we will make this table comparable with the condition disturbance variable. For that, reclassify every disturbance &gt;=25% to disturbed and the ones &lt;25% as not disturbed.</p>
 
 <pre><code class="r">disturbances_tree25&lt;- merge(dist_condid,condid, by=c(&quot;STATECD&quot;, &quot;COUNTYCD&quot;, &quot;PLOT&quot;, &quot;INVYR&quot;, &quot;CONDID&quot;, &quot;ID&quot;)) %&gt;%
-  mutate(proportion=(trees_dist/trees_tot)*100)
+  mutate(proportion=(trees_dist/trees_tot)*100) #create the proportion variable
 </code></pre>
 
 <pre><code class="r">disturbances_tree25$DIST_TYPE&lt;- ifelse(disturbances_tree25$proportion &gt;= 25, disturbances_tree25$DIST_TYPE, 0 )
@@ -671,7 +710,7 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 <pre><code class="r">disturbances_tree25$IDC &lt;- paste(disturbances_tree25$STATECD, disturbances_tree25$COUNTYCD, disturbances_tree25$PLOT, disturbances_tree25$INVYR, disturbances_tree25$CONDID, sep=&quot;_&quot;)
 </code></pre>
 
-<pre><code class="r">vec&lt;-unique(disturbances_tree25$IDC)
+<pre><code class="r">vec&lt;-unique(disturbances_tree25$IDC) #vector to use in the loop
 </code></pre>
 
 <pre><code class="r">disturbances_tree25$Dcode&lt;-0 #create a column to store the numbers for disturbances occurrences 
@@ -700,13 +739,13 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
   pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
 </code></pre>
 
-<p>Rename columns names (1,2 to dist1, dist2) #CHECK CODE WITH MORE COUNTIES. IN COUNTY1 THERE ARE NO COMPOUND DISTURBANCES</p>
+<p>Rename columns names (1,2&hellip; to dist1, dist2&hellip;)</p>
 
 <pre><code class="r">disturbancesTreeTable25&lt;-disturbancesTreeTable25 %&gt;% 
   rename( &quot;dist1&quot;=&quot;1&quot;,
           &quot;dist2&quot;=&quot;2&quot;,
           &quot;dist3&quot;=&quot;3&quot;,
-          &quot;dist4&quot;=&quot;4&quot;) #we will use disturbances 1 and 2 from now on, as if there is 2+ disturbances, it will already be considered a compound disturbance
+          &quot;dist4&quot;=&quot;4&quot;)
 </code></pre>
 
 <p>Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)</p>
@@ -714,23 +753,47 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 <pre><code class="r">disturbancesTreeTable25[is.na(disturbancesTreeTable25)] &lt;- 0 #fill NA&#39;s with zeros
 </code></pre>
 
-<pre><code class="r">disturbancesTreeTable25$DIST &lt;- ifelse(disturbancesTreeTable25$dist1 != 0 &amp; disturbancesTreeTable25$dist2 == 0, 1,
-                                     ifelse(disturbancesTreeTable25$dist1 != 0 &amp; disturbancesTreeTable25$dist2 != 0 ,2,0))
+<p>This table resembles the condition table with how disturbances are recorded per condid</p>
+
+<p>Now let&#39;s scale up to a plot level</p>
+
+<p>Convert to long format</p>
+
+<pre><code class="r">disturbancesTreeTable25 &lt;- disturbancesTreeTable25 %&gt;% pivot_longer(dist1:dist4,names_to=&quot;DSTRBCD&quot; , values_to=&quot;DIST&quot;)
 </code></pre>
 
-<pre><code class="r">tree_dist25&lt;- disturbancesTreeTable25 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
-  summarise (disturbance = sum(DIST, na.rm=T))
+<p>Get unique observations for the dataset</p>
+
+<pre><code class="r">disturbancesTreeTable25 &lt;- unique(disturbancesTreeTable25) #make sure we have unique observations for the dataset   
+</code></pre>
+
+<p>Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a specific disturbance</p>
+
+<pre><code class="r">disturbancesTreeTable25$dist_count &lt;- ifelse(disturbancesTreeTable25$DIST != 0, 1,0) 
+</code></pre>
+
+<pre><code class="r">disturbancesTreeTable25&lt;- disturbancesTreeTable25 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %&gt;% 
+  summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from each condition in a plot
+</code></pre>
+
+<pre><code class="r">disturbancesTreeTable25$disturbance&lt;- ifelse(disturbancesTreeTable25$disturbance != 0,1,0)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+</code></pre>
+
+<p>Now we can scale up to a plot level:</p>
+
+<pre><code class="r">disturbancesTreeTable25&lt;- disturbancesTreeTable25 %&gt;% group_by(STATECD, COUNTYCD, PLOT, INVYR) %&gt;% 
+  summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
 </code></pre>
 
 <p>The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value &gt;1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND</p>
 
 <p>Now standardize the names ND=0, SD=1, CD &gt;=2</p>
 
-<pre><code class="r">tree_dist25$disturbance &lt;- ifelse(tree_dist25$disturbance == 0, &quot;ND&quot;,
-                                ifelse(tree_dist25$disturbance == 1 , &quot;SD&quot;, &quot;CD&quot;))
+<pre><code class="r">disturbancesTreeTable25$disturbance &lt;- ifelse(disturbancesTreeTable25$disturbance_sum == 0, &quot;ND&quot;,
+                                            ifelse(disturbancesTreeTable25$disturbance_sum == 1 , &quot;SD&quot;, &quot;CD&quot;))  
 </code></pre>
 
-<pre><code class="r">cont_table_TREE25&lt;- tree_dist25 %&gt;% group_by(disturbance) %&gt;%
+<pre><code class="r">cont_table_TREE25&lt;- disturbancesTreeTable25 %&gt;% group_by(disturbance) %&gt;%
   summarise(n_plots=n())
 </code></pre>
 
@@ -744,6 +807,155 @@ WI_TCP3$MAX_DIA&lt;- 0 #create an empty column for the upper end of the diameter
 ## 2 ND              304
 ## 3 SD               15
 </code></pre>
+
+<p>####################################################################################</p>
+
+<pre><code class="r"># Visualization ----
+</code></pre>
+
+<p>####################################################################################</p>
+
+<h2>6. Represent proportion of conditions disturbed per disturbance type</h2>
+
+<h3>Violin plots</h3>
+
+<pre><code class="r">p.vio &lt;- ggplot(disturbances_tree, aes(x= as.factor(DIST_TYPE), y=proportion)) +
+  geom_violin()
+</code></pre>
+
+<pre><code class="r">p.vio 
+</code></pre>
+
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAH4CAMAAACR9g9NAAAA2FBMVEUAAAAAADoAAGYAOpAAZmYAZrYzMzM6AAA6ADo6AGY6OmY6OpA6ZrY6kNtNTU1NTW5NTY5NbqtNjshmAABmADpmAGZmOgBmOpBmtv9uTU1uTY5ubqtujshuq6tuq+SOTU2OTY6ObquOjk2OjsiOq+SOyP+QOgCQOjqQOmaQ2/+rbk2r5P+2ZgC2Zjq2/7a2/9u2///Ijk3Ijm7Ijo7IyP/I///bkDrbtmbb25Db///kq27kq47k/8jk///r6+v/tmb/yI7/25D/5Kv//7b//8j//9v//+T///96363zAAAACXBIWXMAAAsSAAALEgHS3X78AAAOy0lEQVR4nO2d/UMU1xlGVy3bWusaMbaYpCRW15aPtqCFRCxl+Zz//z/qzCw6rPjAvLNXue97z/mBCDHPHvdw2eHD7KiCIhndtQDcDYQvFMIXCuELpW/4/xkw/WaWvvUU4eMsEb7QJcIXukT4QpcIX+gS4QtdInyhS4QvdInwhS4RvtAlwhe6RPhClwhf6BLhC10ifKFLhC90ifCFLhG+0KVk4Q+m1cXmZHX+gvDZL6UKvzuZVrP1anfaviB89kuJwp/9pz7xH7bq9u2LqhqPxz0fEQogy/vC7iQ/1L9tmr+dh6848R3jcaqlhCfe4nRL+KsnnvBXiB6ex3hB9PBc1QtCh7+OxSLHXITvbpbwgyC8XjZa+1oivF42WvtaIrxeNlr7WiK8XjZa+1oivF42WvtaIrxeNlr7WiK8XjZa+1oivF42WvtaIrxeNlr7WkrWnfC+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgoLDx/J8bmIkj0Z0XUs7345nlNOfHezhB8E4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tcS4fWy0drXEuH1stHa1xLh9bLR2tdS9PAHk8lk/WJz8mSL8AtED1/zbu/sFSf+c+KHn61XJy8mTw+rajzO8hl47oYs74qkT0b0bq9t/7p9xfLul+M55cR3N3tL+JOf2n/U7Ql/lfDhm+IH02o2JfwC4cPX0av6qn61IvwC4cMvYrHIMRfhu5sl/CAIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43WvpYIr5eN1r6WCK+Xjda+lgivl43Wmhzv5BydCC+J7UR4SWwnwktiOxFeEtuJ8JLYToSXxHYivCS2E+ElsZ0IL4ntRHhJbCfCS2I7EV4S24nwkthOhJfEdiK8JLYT4SWxnQgvie1EeElsJ8JLYjsRXhLbifCS2E6El8R2IrwkthPhJbGdCC+J7UR4SWwnwktiOxFeEtuJ8JLYToSXxHYivCS2E+ElsZ0IL4ntRHhJbCfCS2I7EV4S2+krhr8bcnz+lxyd0j4nzQKWd7/YpytHJz7US2I7EV4S24nwkthOhJfEdiK8JLYT4SWxnQgvie1EeElsJ8JLYjsRXhLbifCS2E6El8R2IrwkthPhJbGdCC+J7UR4SWwnwktiOxFeEtuJ8JLYToSXxHYivCS2E+ElsZ0IL4ntRHhJbCfCS2I7EV4S24nwkthOhJfEdloq/P6o5v4O4W8hR6dlwp9+v8GJ70OOTkuFf64OO+EXyNFpqQ/122uE70OOTkud+Gc8xvciRyeu6iWxnZYK3xx5eeAJ/4kcnZYJf/6mfow/evCe8LeQo9PSV/X60t5iEftOztGJEy+J7cRjvCS2E1f1kthOw8OfPv8Xn8f3I0cnTrwkthNX9ZLYTsPDn78ZtXBVfys5Oi1z4o9HfFu2Fzk68W1ZSWwnvi0rie3Et2UlsZ34dE4S2ynll2wvNidPtuoXq4RfJEenlN+kOXtVv5itV7tTwi+Qo1PKL+CcvJg8Pfyw1bSvxuM7egaeHJ/4J0enZZ6M6PMTXwc/ef12Hr7ixHfk6JT427Kz9Q+Ev0aOTimv6g+m1WzKY/x1cnRa+sRf+VJ9e0HPVf11cnTiR68ksZ34tqwkttNyX6t/XJ/4FfWQb7GIfSfn6LT81+rlV+stFrHv5Byd+Fq9JLYTP14tie3EVb0kthNX9ZLYTpx4SWwnHuMlsZ34YUtJbCfCS2I78VO2kthO/JStJLYTX7mTxHZK+f14wgtydOLzeElsJ75yJ4ntxPfjJbGd+H68JLYTV/WS2E6El8R2IrwkthPhJbGdCC+J7UR4SWwnwktiOxFeEtuJ8JLYToSXxHYivCS2E+ElsZ0IL4ntRHhJbCfCS2I7EV4S24nwkthOhJfEdiK8JLYT4SWxnQgvie1EeElsJ8JLYjsRXhLbifCS2E6El8R2IrwkthPhJbGdvmL4uyHHJ/7J0WmZJyO6Bcu7X+zTlaMTH+olsZ0IL4ntRHhJbCfCS2I7EV4S24nwkthOhJfEdiK8JLYT4SXBnQivCO5EeEVwJ8IrgjsRXhHcifCK4E6EVwR3IrwiuBPhFcGdCK8I7kR4RXAnwiuCOxFeEdyJ8IrgToRXBHcivCK4E+EVwZ0IrwjuRHhFcCfCK4I7EV4R3InwiuBOhFcEdyK8IrgT4RXBnQivCO5EeEVwJ8IrgjsRXhHcifCK4E6EVwR3IrwiuBPhFcGdCK8I7kR4RXAnwiuCOxFeEdyJ8IrgToRXBHcivCK4E+EVwZ0Shj/7efLd3sXm5MkW4RfI0ilh+INpdbB+9ooT/zlZOqX9UD+bnryYPD2sqvH4jp6BJ8cn/snSKemTEZ29PJytVyev21cs73/BT1eypUxP/Nkve80/6vaEv0qWTgnDn/yw1z7Qz6aEXyBLp4ThdyeTyXp9Vb9aEX6BLJ34PF4R3InwiuBOhFcEdyK8IrgT4RXBncKFT3YvE767WcIPgvB62aitIXw/CC8hfHezhB8E4fWyUVtD+H4QXkL47mYJPwjC62Wjtobw/SC8hPDdzRJ+EITXy0ZtTZbhvTsRfhjunQg/DPdOhB+GeyfCD8O9E+GH4d6J8MNw70T4Ybh3Ivww3DsRfhjunQg/DPdOhB+GeyfCD8O9E+GH4d6J8MNw70T4Ybh3Ivww3DsRfhjunQg/DPdOhB+GeyfCD8O9E+GH4d6J8MNw7+Qg/Nj9nXwjhFeMK+938o0QXkH4nhBeQvjuZgk/CMLrZaO2hPA9IbyEvy3b3SzhB1FY+DthnOMTwGSolPg5aRawvP9x4vvh4sRbNAjfj5ThDVaEH0aW4S13FOGHQXi9bPVWEL4nhJcQvrtZwg8iy6/cEV4ROnz9WTzhBYTvbpbwgyC8XraKKwjfD8JrCN/drIvwqe5lwnc36yF8siNP+O5mCT8Iwutlq7gix/A5PvwQXoNTd7OEH4J/J8IPwr8T4YcwztCJ8DeQLHxzZySSIryC8P0gvIbw3c0S3s6Y8DctW8UVGYavCH/DslVckWv4RFaEVxC+H4TXEL67WcLbIfyNy1ZxBeH7QXgN4bubJbyd8SVJxgivyC98nkuE12SYi/ASwvcjYPj8fr4tx6WI4VNNZZiL8BLC94PwmgxzEV5C+H4QXpNhLsJLCN8PwmsyzEV4CeF7Eu5/fpTh30zNcilaeJZ6Eu3/ZctST6L936tZ6gnhC10yTRE+zlLy8Bebk1XC57+UPPxsvdqdEj77peThP2w17avxwpPdjJfnxhuFb8HN4d/Ow1ec+LyXvtaJJ3zmSzzGF7rEVX2hS3weX+gS4QtdInyhS4QvdInwhS4RvtAlwhe6RPhClwhf6BLhC10ifKFLhC90ifCFLhG+0CXCF7pE+EKXvmJ4C+l+lpKlrzZF+AhLhC90KZPw4ADCFwrhC4XwhZI8fPej+Mtx9vPku71EYyc/HiZZqkeebKVaeprGqTqYTCbr9qnk4bu/fLMcB9PqYD3N2MXm08MkS2evqkR/wOZPN011V1Xv9uxTycN3f91uaWbTNGMHf315mGTp5EV9TpMsvftbqqWqfVe0TyUP/zZZ+LOXh0nGTn78b6KleuHkdZKl+njO1lPdVe/2Btzr+Z74s1/20oy1D4LpTleaE7+Xaql+x/5pyL2e7WP8yQ97ycbqjx2pHplnaR6Z0y21d9KAOyrbq/rdYRerX6QOn+pafDXNHzDhVX3zTjRAis/jC4XwhUL4QiF8oRC+UAhfKKWEP38zWrvy6ulf3l/9t/uPj0aj0b2N6vjR++ZXa8e/H83fUDP/9Wj+328/bl69tzH//Z/NeKKU8HVR/erxn6qjlfofD3eOH/32cKc6/sNG887Q/Ybm1+d/r99Y/7bmPz168OtK+y+OHldOCRt+fzRaac75qE1z+mx0f6d9U3OA7//7zejB+/3m3x3/8c/3d/650Yavttfq8B/fJT4P3xRvTngT/vjRZfjzf+x84z9XKqKGbyo936lz1i8vX5+/6fT7jWp/pXn1YfPr5nA3v6UNv/+4fvt2/S5SVV8IX7+s30M+nvj6Q/2D+l1kf+0LN+6BqOGbg31vo36xcvlqc07bN7UnunksX5kf8fkZ7sI3Hx6a9NfD1w/w8+HmMX5l4d/4I2r4o/vt2W4ytWeyKd2+6abw81erec4vhV+rPl4eED5T6jBH9zb2Vy6P6WXp+k3Nu8PRg98+faivM378UN9e3P1an/bzN2t9w2/zoT4v6qu53z1bq7abR+ImbPMAP39Tc3G3c/qsvbhbm2dsLu4+fTpXv7m9ILwl/PwTPC7uXFN/OjcQPp3zjXikvvplnC/CF3DAG4QvFMIXCuELhfCF8n+ahtVNszMt7AAAAABJRU5ErkJggg==" alt="plot of chunk unnamed-chunk-94"/></p>
+
+<h3>Boxplots</h3>
+
+<pre><code class="r">p.box &lt;- ggplot(disturbances_tree, aes(x= as.factor(DIST_TYPE), y=proportion)) +
+  geom_boxplot()
+</code></pre>
+
+<pre><code class="r">p.box
+</code></pre>
+
+<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-96"/></p>
+
+<p>#MAKE THE GRAPHS PUBLICATION READY</p>
+
+<p>####################################################################################</p>
+
+<pre><code class="r"># Chi square tests ----
+</code></pre>
+
+<p>####################################################################################</p>
+
+<h2>7. Perform tests of independence</h2>
+
+<h3>7.1 Condition disturbance vs diffused disturbance 0% threshold</h3>
+
+<p>Database from condition disturbance: cont_table_COND</p>
+
+<p>Database from complete diffused disturbance (0% threshold/considering all proportions): cont_table_TREE </p>
+
+<h4>7.1.1 Merge both tables</h4>
+
+<pre><code class="r">cont_table1&lt;- merge(cont_table_COND,cont_table_TREE, by=&quot;disturbance&quot;)
+</code></pre>
+
+<p>Rename the columns</p>
+
+<pre><code class="r">names(cont_table1)&lt;-c(&quot;Disturbance&quot;, &quot;Condition_table&quot;, &quot;Diffused_complete&quot;)
+</code></pre>
+
+<pre><code class="r">cont_table1
+</code></pre>
+
+<pre><code>##   Disturbance Condition_table Diffused_complete
+## 1          CD               1                37
+## 2          ND             305               176
+## 3          SD              14               107
+</code></pre>
+
+<h4>7.1.2 Now perform the Chi square independent tests with an alpha of 0.05.</h4>
+
+<p>Ho: There is no association between variables (they are independent)./ The way we build the disturbance variable is independent from the result</p>
+
+<p>Ha: There is an association between variables</p>
+
+<pre><code class="r">print(x_cond_diff&lt;-cont_table1[,c(2,3)] %&gt;% chisq.test()) #pick columns 2,3 to make it a contingency table
+</code></pre>
+
+<pre><code>## 
+##  Pearson&#39;s Chi-squared test
+## 
+## data:  .
+## X-squared = 140.18, df = 2, p-value &lt; 2.2e-16
+</code></pre>
+
+<pre><code class="r">x_cond_diff$expected #display the expected values
+</code></pre>
+
+<pre><code>##      Condition_table Diffused_complete
+## [1,]            19.0              19.0
+## [2,]           240.5             240.5
+## [3,]            60.5              60.5
+</code></pre>
+
+<p>As p-value &lt;0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference </p>
+
+<h3>7.2 Condition disturbance vs diffused disturbance 25% threshold</h3>
+
+<p>Database from condition disturbance: cont_table_COND</p>
+
+<p>Database from diffused disturbance with 25% threshold (considering proportions &gt;=25): cont_table_TREE25 </p>
+
+<h4>7.2.1 Merge both tables</h4>
+
+<pre><code class="r">cont_table2&lt;- merge(cont_table_COND,cont_table_TREE25, by=&quot;disturbance&quot;)
+</code></pre>
+
+<p>Rename the columns</p>
+
+<pre><code class="r">names(cont_table2)&lt;-c(&quot;Disturbance&quot;, &quot;Condition_table&quot;, &quot;Diffused_25&quot;)
+</code></pre>
+
+<pre><code class="r">cont_table2
+</code></pre>
+
+<pre><code>##   Disturbance Condition_table Diffused_25
+## 1          CD               1           1
+## 2          ND             305         304
+## 3          SD              14          15
+</code></pre>
+
+<h4>7.2.2 Now perform the Chi square independent tests with an alpha of 0.05.</h4>
+
+<p>Ho: There is no association between variables (they are independent)./ The way we build the disturbance variable is independent from the result</p>
+
+<p>Ha: There is an association between variables</p>
+
+<pre><code class="r">print(x_cond_diff25&lt;-cont_table2[,c(2,3)] %&gt;% chisq.test()) #pick columns 2,3 to make it a contingency table
+</code></pre>
+
+<pre><code>## Warning in chisq.test(.): Chi-squared approximation may be incorrect
+</code></pre>
+
+<pre><code>## 
+##  Pearson&#39;s Chi-squared test
+## 
+## data:  .
+## X-squared = 0.036125, df = 2, p-value = 0.9821
+</code></pre>
+
+<pre><code class="r">x_cond_diff25$expected #display the expected values
+</code></pre>
+
+<pre><code>##      Condition_table Diffused_25
+## [1,]             1.0         1.0
+## [2,]           304.5       304.5
+## [3,]            14.5        14.5
+</code></pre>
+
+<p>As p-value &gt;0.05, we fail to reject Ho, therefore we conclude that when considering a 25% threshold, there is no association between the variables. In other words, the way we calculate the disturbance variable does not make a difference </p>
 
 <p>####################</p>
 
