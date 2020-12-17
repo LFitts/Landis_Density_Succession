@@ -19,12 +19,18 @@ WI_COND<-read.csv("data/main_WI_2020/WI_COND.csv", na.strings = "NA")#read the c
 WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
 WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
 #'
+#Subset for ONE county (COUNTYCD =1) and just keep records from 2000 on (this was done during the initial development of the code to test it)
+#
+#WI_COND1<-subset(WI_COND, COUNTYCD==1) %>% subset(INVYR >= 2000)
+#WI_PLOT1<-subset(WI_PLOT, COUNTYCD==1) %>% subset(INVYR >= 2000)
+#WI_TREE1<-subset(WI_TREE, COUNTYCD==1) %>% subset(INVYR >= 2000)
 #'
-#' Subset for ONE county (COUNTYCD =1) and just keep records from 2000 on
 #'
-WI_COND1<-subset(WI_COND, COUNTYCD==1) %>% subset(INVYR >= 2000)
-WI_PLOT1<-subset(WI_PLOT, COUNTYCD==1) %>% subset(INVYR >= 2000)
-WI_TREE1<-subset(WI_TREE, COUNTYCD==1) %>% subset(INVYR >= 2000)
+#' Subset to just keep records from 2000 on
+#'
+WI_COND1<-subset(WI_COND, INVYR >= 2000)
+WI_PLOT1<-subset(WI_PLOT, INVYR >= 2000)
+WI_TREE1<-subset(WI_TREE, INVYR >= 2000)
 #'
 #' Keep each identifier record different before combining tables
 #'
@@ -427,22 +433,35 @@ cont_table_TREE25
 #' 
 #' ## 6. Represent proportion of conditions disturbed per disturbance type
 #'
+#' First rename the disturbance types
+#' 
+disturbances_tree$agent_mortality<- ifelse(disturbances_tree$DIST_TYPE==10,"Insect",
+                                           ifelse(disturbances_tree$DIST_TYPE==20,"Disease",
+                                           ifelse(disturbances_tree$DIST_TYPE==30,"Fire",
+                                                  ifelse(disturbances_tree$DIST_TYPE==40,"Animal",
+                                                         ifelse(disturbances_tree$DIST_TYPE==50,"Weather",
+                                                                ifelse(disturbances_tree$DIST_TYPE==60,"Vegetation",
+                                                                       ifelse(disturbances_tree$DIST_TYPE==70,"Other",
+                                                                              ifelse(disturbances_tree$DIST_TYPE==80,"Silvicultural", 
+                                                                                     ifelse(disturbances_tree$DIST_TYPE==0,"Not disturbed", NA)))))))))
 #'
-#' ### Violin plots
+#' Remove the non disturbed category
 #' 
-p.vio <- ggplot(disturbances_tree, aes(x= as.factor(DIST_TYPE), y=proportion)) +
-  geom_violin()
-#' 
-p.vio 
-#'  
+disturbances_tree<- disturbances_tree %>% filter(agent_mortality != "Not disturbed")
+#'
 #' ### Boxplots
 #'
-p.box <- ggplot(disturbances_tree, aes(x= as.factor(DIST_TYPE), y=proportion)) +
-  geom_boxplot()
+p.box <- ggplot(disturbances_tree, aes(x= agent_mortality, y=proportion)) +
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion of each plot disturbed in %")+theme_classic()
 #'
 p.box
 #'
-#' #MAKE THE GRAPHS PUBLICATION READY
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box, file="figures/disturbances/proportion_disturbances.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances.tiff", plot = p.box, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
 #'
 #' ####################################################################################
 # Chi square tests ----
@@ -500,7 +519,7 @@ cont_table2
 print(x_cond_diff25<-cont_table2[,c(2,3)] %>% chisq.test()) #pick columns 2,3 to make it a contingency table
 x_cond_diff25$expected #display the expected values
 #'
-#' As p-value >0.05, we fail to reject Ho, therefore we conclude that when considering a 25% threshold, there is no association between the variables. In other words, the way we calculate the disturbance variable does not make a difference 
+#' As p-value <0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference
 #' 
 #'
 #' ####################

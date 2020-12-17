@@ -226,11 +226,18 @@ WI_PLOT&lt;-read.csv(&quot;data/main_WI_2020/WI_PLOT.csv&quot;, na.strings = &qu
 WI_TREE&lt;-read.csv(&quot;data/main_WI_2020/WI_TREE.csv&quot;, na.strings = &quot;NA&quot;)#read the tree table
 </code></pre>
 
-<p>Subset for ONE county (COUNTYCD =1) and just keep records from 2000 on</p>
+<pre><code class="r">#Subset for ONE county (COUNTYCD =1) and just keep records from 2000 on (this was done during the initial development of the code to test it)
+#
+#WI_COND1&lt;-subset(WI_COND, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+#WI_PLOT1&lt;-subset(WI_PLOT, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+#WI_TREE1&lt;-subset(WI_TREE, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+</code></pre>
 
-<pre><code class="r">WI_COND1&lt;-subset(WI_COND, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
-WI_PLOT1&lt;-subset(WI_PLOT, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
-WI_TREE1&lt;-subset(WI_TREE, COUNTYCD==1) %&gt;% subset(INVYR &gt;= 2000)
+<p>Subset to just keep records from 2000 on</p>
+
+<pre><code class="r">WI_COND1&lt;-subset(WI_COND, INVYR &gt;= 2000)
+WI_PLOT1&lt;-subset(WI_PLOT, INVYR &gt;= 2000)
+WI_TREE1&lt;-subset(WI_TREE, INVYR &gt;= 2000)
 </code></pre>
 
 <p>Keep each identifier record different before combining tables</p>
@@ -345,16 +352,16 @@ DIST_SUBP$DIST_TYPE[is.na(DIST_SUBP$DIST_TYPE)] &lt;- 0 # Filling the missing va
 ## # Groups:   INVYR, PLOT, SUBP, DIA_CLASS [9]
 ##    INVYR  PLOT  SUBP DIA_CLASS   DIST_TYPE N_TREES_DIA N_DIST_TREES
 ##    &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;chr&gt;           &lt;dbl&gt;       &lt;int&gt;        &lt;dbl&gt;
-##  1  2000 20032     3 [ 15 - 20 &gt;        70           1            1
-##  2  2000 20032     3 [ 15 - 20 &gt;         0           2            0
-##  3  2000 20032     3 [ 5 - 10 &gt;          0           8            0
-##  4  2000 20032     4 [ 5 - 10 &gt;          0           6            0
-##  5  2000 20040     1 [ 10 - 15 &gt;         0           4            0
-##  6  2000 20040     1 [ 15 - 20 &gt;         0           1            0
-##  7  2000 20040     2 [ 5 - 10 &gt;         70           1            1
-##  8  2000 20040     3 [ 10 - 15 &gt;         0           4            0
-##  9  2000 20040     4 [ 10 - 15 &gt;         0           7            0
-## 10  2000 20040     4 [ 5 - 10 &gt;          0           2            0
+##  1  2000 20001     2 [ 15 - 20 &gt;        70           2            2
+##  2  2000 20001     2 [ 30 - 35 &gt;        70           1            1
+##  3  2000 20001     2 [ 5 - 10 &gt;         70           1            1
+##  4  2000 20001     2 [ 5 - 10 &gt;          0           1            0
+##  5  2000 20001     4 [ 25 - 30 &gt;         0           1            0
+##  6  2000 20003     1 [ 10 - 15 &gt;         0           4            0
+##  7  2000 20003     1 [ 15 - 20 &gt;         0           1            0
+##  8  2000 20003     1 [ 20 - 25 &gt;         0           3            0
+##  9  2000 20003     1 [ 25 - 30 &gt;         0           1            0
+## 10  2000 20003     1 [ 5 - 10 &gt;         20           1            1
 </code></pre>
 
 <p>This table is the one to be used for LANDIS purposes</p>
@@ -382,7 +389,7 @@ DIST_SUBP$DIST_TYPE[is.na(DIST_SUBP$DIST_TYPE)] &lt;- 0 # Filling the missing va
 <pre><code class="r">nrow(unique(WI_TCP))
 </code></pre>
 
-<pre><code>## [1] 7487
+<pre><code>## [1] 568778
 </code></pre>
 
 <pre><code class="r">###################################################################################
@@ -454,9 +461,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
-## 1 CD                1
-## 2 ND              305
-## 3 SD               14
+## 1 CD              110
+## 2 ND            21018
+## 3 SD             1424
 </code></pre>
 
 <p>This disturbance variable identifies disturbances that affect 25% or more of trees in the condition</p>
@@ -556,7 +563,7 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code class="r">length(unique(disturbances_tree$ID)) #total number of plots 320, matches the plot_WI_CP
 </code></pre>
 
-<pre><code>## [1] 320
+<pre><code>## [1] 22552
 </code></pre>
 
 <p>####################################################################################</p>
@@ -622,14 +629,14 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 </code></pre>
 
 <pre><code>## # A tibble: 6 x 10
-##   STATECD COUNTYCD  PLOT INVYR CONDID IDC               dist1 dist2 dist3 dist4
-##     &lt;int&gt;    &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;int&gt; &lt;chr&gt;             &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1      55        1 10349  2009      1 55_1_10349_2009_1    70    20     0     0
-## 2      55        1 20001  2011      1 55_1_20001_2011_1    70     0     0     0
-## 3      55        1 20007  2007      1 55_1_20007_2007_1    70     0     0     0
-## 4      55        1 20007  2018      1 55_1_20007_2018_1    70    20     0     0
-## 5      55        1 20012  2015      1 55_1_20012_2015_1    70     0     0     0
-## 6      55        1 20026  2001      1 55_1_20026_2001_1    70     0     0     0
+##   STATECD COUNTYCD  PLOT INVYR CONDID IDC                 dist1 dist2 dist3 dist4
+##     &lt;int&gt;    &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;int&gt; &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1      55      103 20143  2006      1 55_103_20143_2006_1    80    70     0     0
+## 2      55      103 20228  2008      1 55_103_20228_2008_1    80     0     0     0
+## 3      55       11 20047  2010      1 55_11_20047_2010_1     80     0     0     0
+## 4      55      111 20067  2017      1 55_111_20067_2017_1    80    70    20     0
+## 5      55      111 20173  2011      1 55_111_20173_2011_1    80    70     0     0
+## 6      55      111 20307  2011      3 55_111_20307_2011_3    80     0     0     0
 </code></pre>
 
 <p>This table resembles the condition table with how disturbances are recorded per condid</p>
@@ -682,9 +689,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
-## 1 CD               37
-## 2 ND              176
-## 3 SD              107
+## 1 CD             1740
+## 2 ND            12936
+## 3 SD             7876
 </code></pre>
 
 <p>####################################################################################</p>
@@ -803,9 +810,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code>## # A tibble: 3 x 2
 ##   disturbance n_plots
 ##   &lt;chr&gt;         &lt;int&gt;
-## 1 CD                1
-## 2 ND              304
-## 3 SD               15
+## 1 CD                9
+## 2 ND            21865
+## 3 SD              678
 </code></pre>
 
 <p>####################################################################################</p>
@@ -817,29 +824,42 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 
 <h2>6. Represent proportion of conditions disturbed per disturbance type</h2>
 
-<h3>Violin plots</h3>
+<p>First rename the disturbance types</p>
 
-<pre><code class="r">p.vio &lt;- ggplot(disturbances_tree, aes(x= as.factor(DIST_TYPE), y=proportion)) +
-  geom_violin()
+<pre><code class="r">disturbances_tree$agent_mortality&lt;- ifelse(disturbances_tree$DIST_TYPE==10,&quot;Insect&quot;,
+                                           ifelse(disturbances_tree$DIST_TYPE==20,&quot;Disease&quot;,
+                                           ifelse(disturbances_tree$DIST_TYPE==30,&quot;Fire&quot;,
+                                                  ifelse(disturbances_tree$DIST_TYPE==40,&quot;Animal&quot;,
+                                                         ifelse(disturbances_tree$DIST_TYPE==50,&quot;Weather&quot;,
+                                                                ifelse(disturbances_tree$DIST_TYPE==60,&quot;Vegetation&quot;,
+                                                                       ifelse(disturbances_tree$DIST_TYPE==70,&quot;Other&quot;,
+                                                                              ifelse(disturbances_tree$DIST_TYPE==80,&quot;Silvicultural&quot;, 
+                                                                                     ifelse(disturbances_tree$DIST_TYPE==0,&quot;Not disturbed&quot;, NA)))))))))
 </code></pre>
 
-<pre><code class="r">p.vio 
-</code></pre>
+<p>Remove the non disturbed category</p>
 
-<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-94"/></p>
+<pre><code class="r">disturbances_tree&lt;- disturbances_tree %&gt;% filter(agent_mortality != &quot;Not disturbed&quot;)
+</code></pre>
 
 <h3>Boxplots</h3>
 
-<pre><code class="r">p.box &lt;- ggplot(disturbances_tree, aes(x= as.factor(DIST_TYPE), y=proportion)) +
-  geom_boxplot()
+<pre><code class="r">p.box &lt;- ggplot(disturbances_tree, aes(x= agent_mortality, y=proportion)) +
+  geom_boxplot(color=&quot;black&quot;, fill=&quot;gray&quot;,)+xlab(&quot;Disturbance type&quot;)+ylab(&quot;Proportion of each plot disturbed in %&quot;)+theme_classic()
 </code></pre>
 
 <pre><code class="r">p.box
 </code></pre>
 
-<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-96"/></p>
+<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-97"/></p>
 
-<p>#MAKE THE GRAPHS PUBLICATION READY</p>
+<p>Save the boxplot to a tiff format</p>
+
+<pre><code class="r">#ggsave(p.box, file=&quot;figures/disturbances/proportion_disturbances.jpg&quot;, width=7, height=4)
+</code></pre>
+
+<pre><code class="r">#ggsave(file=&quot;figures/disturbances/proportion_disturbances.tiff&quot;, plot = p.box, width=600, height=450, units=&quot;mm&quot;, dpi=300, compression = &quot;lzw&quot;)
+</code></pre>
 
 <p>####################################################################################</p>
 
@@ -870,9 +890,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 </code></pre>
 
 <pre><code>##   Disturbance Condition_table Diffused_complete
-## 1          CD               1                37
-## 2          ND             305               176
-## 3          SD              14               107
+## 1          CD             110              1740
+## 2          ND           21018             12936
+## 3          SD            1424              7876
 </code></pre>
 
 <h4>7.1.2 Now perform the Chi square independent tests with an alpha of 0.05.</h4>
@@ -888,16 +908,16 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 ##  Pearson&#39;s Chi-squared test
 ## 
 ## data:  .
-## X-squared = 140.18, df = 2, p-value &lt; 2.2e-16
+## X-squared = 7836.1, df = 2, p-value &lt; 2.2e-16
 </code></pre>
 
 <pre><code class="r">x_cond_diff$expected #display the expected values
 </code></pre>
 
 <pre><code>##      Condition_table Diffused_complete
-## [1,]            19.0              19.0
-## [2,]           240.5             240.5
-## [3,]            60.5              60.5
+## [1,]             925               925
+## [2,]           16977             16977
+## [3,]            4650              4650
 </code></pre>
 
 <p>As p-value &lt;0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference </p>
@@ -922,9 +942,9 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 </code></pre>
 
 <pre><code>##   Disturbance Condition_table Diffused_25
-## 1          CD               1           1
-## 2          ND             305         304
-## 3          SD              14          15
+## 1          CD             110           9
+## 2          ND           21018       21865
+## 3          SD            1424         678
 </code></pre>
 
 <h4>7.2.2 Now perform the Chi square independent tests with an alpha of 0.05.</h4>
@@ -936,26 +956,23 @@ There will be three categories in each variable: not disturbed (ND), simple dist
 <pre><code class="r">print(x_cond_diff25&lt;-cont_table2[,c(2,3)] %&gt;% chisq.test()) #pick columns 2,3 to make it a contingency table
 </code></pre>
 
-<pre><code>## Warning in chisq.test(.): Chi-squared approximation may be incorrect
-</code></pre>
-
 <pre><code>## 
 ##  Pearson&#39;s Chi-squared test
 ## 
 ## data:  .
-## X-squared = 0.036125, df = 2, p-value = 0.9821
+## X-squared = 367.21, df = 2, p-value &lt; 2.2e-16
 </code></pre>
 
 <pre><code class="r">x_cond_diff25$expected #display the expected values
 </code></pre>
 
 <pre><code>##      Condition_table Diffused_25
-## [1,]             1.0         1.0
-## [2,]           304.5       304.5
-## [3,]            14.5        14.5
+## [1,]            59.5        59.5
+## [2,]         21441.5     21441.5
+## [3,]          1051.0      1051.0
 </code></pre>
 
-<p>As p-value &gt;0.05, we fail to reject Ho, therefore we conclude that when considering a 25% threshold, there is no association between the variables. In other words, the way we calculate the disturbance variable does not make a difference </p>
+<p>As p-value &lt;0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference</p>
 
 <p>####################</p>
 
