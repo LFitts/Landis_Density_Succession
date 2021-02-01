@@ -50,7 +50,8 @@ cond_d_dataframe<-data.frame()
 dist_100_dataframe<-data.frame()
 dist_25_dataframe<-data.frame()
 dist_vis_dataframe<-data.frame()
-
+cond_vis_dataframe<-data.frame()
+cond_vis_all_dataframe<-data.frame()
 
 #' Now create the loop
 for(i in 1:48){
@@ -125,6 +126,8 @@ for(i in 1:48){
   #'
   plot_FIA_CP<- unique(plot_FIA_CP) #unique observations for the dataset   
   #'
+  cond_vis_all_dataframe<-rbind(cond_vis_all_dataframe,plot_FIA_CP)
+  #'
   #' Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a disturbance
   #' 
   plot_FIA_CP$dist_count <- ifelse(plot_FIA_CP$DIST != 0, 1,0) 
@@ -149,6 +152,7 @@ for(i in 1:48){
   plot_FIA_CP$disturbance <- ifelse(plot_FIA_CP$disturbance_sum == 0, "ND",
                                    ifelse(plot_FIA_CP$disturbance_sum == 1 , "SD", "CD"))  
   #' 
+  cond_vis_dataframe<-rbind(cond_vis_dataframe, plot_FIA_CP) 
   #' 
   cont_table_COND<- plot_FIA_CP %>% group_by(STATECD, disturbance) %>%
     summarise(n_plots=n()) #get the number of plots per grouped category/disturbance type (SD, CD, ND)
@@ -402,8 +406,9 @@ setwd("H:/FIA_Wisconsin/Landis_Density_Succession") #set working directory to th
 #write.csv(dist_100_dataframe,'data//diffused_disturbance100_database.CSV')
 #write.csv(dist_25_dataframe,'data//diffused_disturbance25_database.CSV')
 #write.csv(dist_vis_dataframe,'data//diffused_disturbance_visualization_database.CSV')
+#write.csv(cond_vis_dataframe,'data//cond_vis_database.CSV')
+#write.csv(cond_vis_all_dataframe,'data//cond_vis_all_database')
 #'
-#'disturbances_vis
 #'
 ################################################################################################################
 #' ####  Read in the files (when we open a new session)----
@@ -412,11 +417,16 @@ cond_d_dataframe<-read.csv('data/condition_disturbance_database.CSV')
 dist_100_dataframe<-read.csv('data/diffused_disturbance100_database.CSV')
 dist_25_dataframe<-read.csv('data/diffused_disturbance25_database.CSV')
 dist_vis_dataframe<- read.csv('data/diffused_disturbance_visualization_database.CSV')
+cond_vis_database<- read.csv('data/cond_vis_database.CSV')
+cond_vis_all_dataframe<-read.csv('data/cond_vis_all_database')
+#'
 #'
 cond_d_dataframe<-cond_d_dataframe[,-1] #delete the automatic X column generated when reading in the file
 dist_100_dataframe<-dist_100_dataframe[,-1]
 dist_25_dataframe<-dist_25_dataframe[,-1]
 dist_vis_dataframe<-dist_vis_dataframe[,-1]
+cond_vis_database<-cond_vis_database[,-1]
+cond_vis_all_dataframe<-cond_vis_all_dataframe[,-1]
 #'
 #' ####################################################################################
 # Visualization ----
@@ -426,6 +436,8 @@ dist_vis_dataframe<-dist_vis_dataframe[,-1]
 #'
 #' First rename the disturbance types
 #' 
+#'  For the diffused disturbances variable
+#'  
 dist_vis_dataframe$agent_mortality<- ifelse(dist_vis_dataframe$DIST_TYPE>=10 & dist_vis_dataframe$DIST_TYPE<20 ,"Insect",
                                            ifelse(dist_vis_dataframe$DIST_TYPE>=20 & dist_vis_dataframe$DIST_TYPE<30,"Disease",
                                                   ifelse(dist_vis_dataframe$DIST_TYPE>=30 & dist_vis_dataframe$DIST_TYPE<40,"Fire",
@@ -440,6 +452,20 @@ dist_vis_dataframe$agent_mortality<- ifelse(dist_vis_dataframe$DIST_TYPE>=10 & d
 #' Remove the non disturbed category
 #' 
 dist_vis_dataframe<- dist_vis_dataframe %>% filter(agent_mortality != "Not disturbed")
+#'
+#' For the condition level variable
+#' 
+cond_vis_all_dataframe$DIST<- ifelse(cond_vis_all_dataframe$DIST>=10 & cond_vis_all_dataframe$DIST<20 ,"Insect",
+                                            ifelse(cond_vis_all_dataframe$DIST>=20 & cond_vis_all_dataframe$DIST<30,"Disease",
+                                                   ifelse(cond_vis_all_dataframe$DIST>=30 & cond_vis_all_dataframe$DIST<40,"Fire",
+                                                          ifelse(cond_vis_all_dataframe$DIST>=40 & cond_vis_all_dataframe$DIST<50,"Animal",
+                                                                 ifelse(cond_vis_all_dataframe$DIST>=50 & cond_vis_all_dataframe$DIST<60,"Weather",
+                                                                        ifelse(cond_vis_all_dataframe$DIST>=60 & cond_vis_all_dataframe$DIST<70,"Vegetation",
+                                                                               ifelse(cond_vis_all_dataframe$DIST>=70 & cond_vis_all_dataframe$DIST<80,"Other",
+                                                                                      ifelse(cond_vis_all_dataframe$DIST>=80 & cond_vis_all_dataframe$DIST<90,"Silviculture", 
+                                                                                             ifelse(cond_vis_all_dataframe$DIST==0,"Not disturbed", NA)))))))))
+#'
+#'
 #'
 #' Merge the state names with the table
 #' 
@@ -483,7 +509,6 @@ p.box_48 <- ggplot(dist_vis_dataframe, aes(x= agent_mortality, y=proportion)) +
 ggsave(p.box_48, file="figures/disturbances/proportion_disturbances_48US.jpg", width=7, height=4)
 #'
 ggsave(file="figures/disturbances/proportion_disturbances_48US.tiff", plot = p.box_48, width=600, height=450, units="mm", dpi=300, compression = "lzw")
-#'
 #'
 #'
 #' ####################################################################################
@@ -574,7 +599,24 @@ print(x_cond_diffC<-cont_tableC_48US[,c(2,3,4)] %>% chisq.test()) #pick columns 
 #'
 #' As p-value <0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference 
 #' 
-#' #### Test for each state individually condition disturbance vs diffused disturbance complete
+#' ###############################################
+#' Histogram ---- 
+#' ###############################################
+#' 
+long<-cont_tableC_48US %>% pivot_longer(Condition:Diffused25, names_to="Type_variable", values_to="n_plots")
+#' 
+hist<-ggplot(long, aes(x=Disturbance))+
+  geom_bar(aes(y=n_plots, fill=Type_variable), stat="identity", position="dodge")
+#'
+ggsave(hist, file="figures/disturbances/hist_disturbance_variables.jpg", width=7, height=4)
+#'
+ggsave(file="figures/disturbances/hist_disturbance_variables.tiff", plot = hist, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#'   
+#' ##############################################
+#' Test for each state individually condition disturbance vs diffused disturbance complete ----
+#' ##############################################
+#'
 #'
 #' A) Condition disturbance vs diffused disturbance 0% threshold
 #'
@@ -655,9 +697,276 @@ testC <- test_M_C %>%
 #' ####################################################################################
 # Maps ----
 #' ####################################################################################
+#install.packages("GISTools")
+#install.packages("sp")
+#install.packages("raster", dependencies=T)
+#install.packages("rgdal", dependencies=T)
+#install.packages("tigris", dependencies=T)
+#install.packages("sf")
+#install.packages("leaflet")
+#install.packages("mapview")
+#' install.packages("maps") 
+#' install.packages("ggspatial")
+library(maps)
+library(GISTools)
+library(sp)
+library(raster)
+library(rgdal)
+library(sf)
+library(leaflet)
+library(mapview)
+library(ggspatial)
+#'
+#' #### Get the plot coordinates for the 48 states
+#'
+#' Create empty data frames for storing data on number of plots disturbed
+#' 
+coordinates<-data.frame() #empty dataframe that will store the coordinate values for all the states
+states_plot<-list.files(path='H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA',pattern="_PLOT")
+#'
+setwd("H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA") #set working directory to the subfolder where the CSV files are located
+#'   Now create the loop
+for(i in 1:48){
+  PLOT_df<-read.csv(states_plot[i])
+  PLOT_df<-subset(PLOT_df, INVYR >= 2000) # Subset to just keep records from 2000 on
+  colnames(PLOT_df)[1]<-"PLT_CN"
+  PLOT_df <- PLOT_df %>% select(PLT_CN, STATECD, COUNTYCD, PLOT, INVYR, LAT, LON)# Select variables of interest
+  coordinates<-rbind(coordinates, PLOT_df)}
+#'
+setwd("H:/FIA_Wisconsin/Landis_Density_Succession") #set working directory back to where the project is
+#'
+#write.csv(coordinates,'data//PLOT_FIA_coordinates.CSV')
+#'
+coordinates<-read.csv("data/PLOT_FIA_coordinates.CSV")
+coordinates<-coordinates[,-1]#remove the x column automatically created when writing the file
+#'
+#' Merge the coordinates with the previous database containing disturbance information
+disturbances_plots_coordinates<-merge(dist_vis_dataframe, coordinates, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
+#'
+condition_plots_coordinates<-merge(cond_vis_all_dataframe, coordinates, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
+#'
+#'This will be run online
+#'
+#' Map #1 Diffused disturbances
+#map1<-mapview(disturbances_plots_coordinates, xcol = "LON", ycol = "LAT", crs = 5070, grid = FALSE)
+#'
+#' Map #2 Condition-level disturbances
+#map2<-mapview(condition_plots_coordinates, xcol = "LON", ycol = "LAT", crs = 5070, grid = FALSE)
+#'
+#' Save the map
+#mapshot(map1, file = "map_diffused_dis.png")
+#mapshot(map1, url = "map_diffused_dis.html")
+#'
+#mapshot(map2, file = "map_condition_dis.png")
+#mapshot(map2, url = "map_condition_dis.html")
+#'
+#' Now do the classic method of a static map
+#' 
+#' For the condition level disturbance variable
+#' 
+#coordinates(condition_plots_coordinates)=c("LON","LAT") #not using this for the selected method in ggplot
+#crs.geo1=CRS("+proj=longlat")
+#proj4string(condition_plots_coordinates)= crs.geo1
+#'
+#' For the diffused level disturbance variable
+#' 
+#coordinates(disturbances_plots_coordinates)=c("LON","LAT")
+#crs.geo1=CRS("+proj=longlat")
+#proj4string(disturbances_plots_coordinates)= crs.geo1
+#'
+#' Create a shapefile with data from the US
+#' 
+US<-map_data(map="state") #create a dataframe with states polygons
+#'
+p1<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=condition_plots_coordinates, aes(x=LON, y=LAT, color=DIST))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#'
+p2<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disturbances_plots_coordinates, aes(x=LON, y=LAT, color=agent_mortality))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#'
+#' ###################################################
+#' #' Case study FIRE ----
+#'  in California, Oregon, Washington
+#' ###################################################
+#' 
+FIRE<-map_data(map="state", region=c("California", "Oregon", "Washington")) #create a dataframe with states polygons
+#'
+fire_data<-disturbances_plots_coordinates%>% filter(STATECD==c(6,41,53)) %>% filter (agent_mortality=="Fire")
+#'
+fire_data_cond<-condition_plots_coordinates %>% filter(STATECD==c(6,41,53)) %>% filter (DIST=="Fire")
 #'
 #'
 #'
+pfire<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=fire_data, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=FIRE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pfire_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=fire_data_cond, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=FIRE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+#'   
+#' ###################################################
+#' #' Case study INSECTS ----
+#' in Maine, New Hampshire, Vermont, Massachusetts, Rhode Island, Connecticut, New York, Pennsylvania, New Jersey
+#' ###################################################
+#'
+INSECTS<-map_data(map="state", region=c("Maine", "New Hampshire", "Vermont", "Massachusetts", "Rhode Island", "Connecticut", "New York", "Pennsylvania", "New Jersey")) #create a dataframe with states polygons
+#'
+insects_data<-disturbances_plots_coordinates%>% filter(STATECD==c(23,33,50,25,44,9,36,42,34)) %>% filter (agent_mortality=="Insect")
+#'
+insects_data_cond<-condition_plots_coordinates%>% filter(STATECD==c(23,33,50,25,44,9,36,42,34)) %>% filter (DIST=="Insect")
+#'
+#'
+pinsects<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=insects_data, aes(x=LON, y=LAT), color="black")+
+  geom_polygon(data=INSECTS, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pinsects_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=insects_data_cond, aes(x=LON, y=LAT), color="black")+
+  geom_polygon(data=INSECTS, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#' ###################################################
+#' #' Case study WEATHER ----
+#'  in Minnesota, Wisconsin, Michigan 
+#' ###################################################
+#'
+WEATHER<-map_data(map="state", region=c("Minnesota", "Wisconsin", "Michigan")) #create a dataframe with states polygons
+#'
+weather_data<-disturbances_plots_coordinates%>% filter(STATECD==c(27, 26, 55)) %>% filter(agent_mortality=="Weather")
+#'
+weather_data_cond<-condition_plots_coordinates%>% filter(STATECD==c(27, 26, 55)) %>% filter(DIST=="Weather")
+#'
+pweather<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=weather_data, aes(x=LON, y=LAT), color="blue")+
+  geom_polygon(data=WEATHER, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pweather_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=weather_data_cond, aes(x=LON, y=LAT), color="blue")+
+  geom_polygon(data=WEATHER, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#' ###################################################
+#' #' Case study DISEASE ----
+#'  in Minnesota, Wisconsin, Iowa, Illinois, and Missouri
+#' ###################################################
+#' 
+DISEASE<-map_data(map="state", region=c("Minnesota", "Wisconsin", "Iowa", "Illinois", "Missouri")) #create a dataframe with states polygons
+#'
+disease_data<-disturbances_plots_coordinates%>% filter(STATECD==c(27,55,19,17,29)) %>% filter (agent_mortality=="Disease")
+#'
+disease_data_cond<-condition_plots_coordinates %>% filter(STATECD==c(27,55,19,17,29)) %>% filter (DIST=="Disease")
+#'
+#'
+#'
+pdisease<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disease_data, aes(x=LON, y=LAT), color="brown")+
+  geom_polygon(data=DISEASE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pdisease_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disease_data_cond, aes(x=LON, y=LAT), color="brown")+
+  geom_polygon(data=DISEASE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+#'   
+#'
+#'
+#' #################################################################################################
+#' 
+#' Plot the "other disturbances" ----
+#'
+#'
+other_data_cond<-condition_plots_coordinates %>% filter (DIST=="Other")
+#'
+other_data<-disturbances_plots_coordinates %>% filter (agent_mortality=="Other")
+#'
+p_others<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=other_data, aes(x=LON, y=LAT), color="orange" )+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+p_others_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=other_data_cond, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+#' Summarize the "other" dataset ag mortality by year
+#' 
+sum_other_data<- other_data %>% group_by (INVYR) %>%
+  summarize(n=n())
+#' 
+#' ####################################
+#' 
+#' Plot everything but "other"
+#' 
+exp_other_data_cond<-condition_plots_coordinates %>% filter (DIST!="Other")
+#'
+exp_other_data<-disturbances_plots_coordinates %>% filter (agent_mortality!="Other")
+#'
+p_exp_others<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=exp_other_data, aes(x=LON, y=LAT, color=agent_mortality ))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+p_exp_others_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=exp_other_data_cond, aes(x=LON, y=LAT, color=DIST))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+#' ###################################################
+#' #' Case study VEGETATION ----
+#'  in Wisconsin
+#' ###################################################
+#' 
+VEGETATION<-map_data(map="state", region=c("Wisconsin")) #create a dataframe with states polygons
+#'
+vegetation_data<-disturbances_plots_coordinates%>% filter(STATECD==c(55)) %>% filter (agent_mortality=="Vegetation")
+#'
+vegetation_data_cond<-condition_plots_coordinates %>% filter(STATECD==c(55)) %>% filter (DIST=="Vegetation")
+#'
+#'
+#'
+pvegetation<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=vegetation_data, aes(x=LON, y=LAT), color="green4")+
+  geom_polygon(data=VEGETATION, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pvegetation_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=vegetation_data_cond, aes(x=LON, y=LAT), color="green4")+
+  geom_polygon(data=VEGETATION, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'  
+#' 
+#' 
+#' 
 #' ####################
 #'         
 #'
