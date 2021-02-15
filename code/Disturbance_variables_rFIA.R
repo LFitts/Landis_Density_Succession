@@ -1,4 +1,4 @@
-# Preparing the dataset for Wisconsin ----
+# Preparing the dataset for the 48 conterminous states ----
 ###################################################################################
 #' ### Installing and loading the libraries needed
 #'
@@ -34,6 +34,10 @@ library(rFIA)
 #'
 #'
 ###################################################################################
+#' 
+ANN_INVYR<-read.csv("data/ANN_INV_START.CSV") #read the table with the dates for when each state started their inventory year
+ANN_INVYR <- ANN_INVYR[,c(1,4)] #leave just STATECD and ANN_INV_START
+#' 
 #' Set working directory where all the state files are located
 #'
 setwd("H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA") #set working directory to the subfolder where the CSV files are located

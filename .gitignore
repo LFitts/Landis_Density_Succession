@@ -19,6 +19,5 @@ _book
 *.Rhistory
 *.RData
 *.Ruserdata
-*data/main_WI_2020/
-*data/all_FIA/
+*data/
 .Rproj.user

@@ -1,0 +1,1472 @@
+# Preparing the dataset for the 48 conterminous states ----
+###################################################################################
+#' ### Installing and loading the libraries needed
+#'
+#install.packages("tidyverse")
+#install.packages("knitr")
+#install.packages("ezknit")
+#install.packages("rFIA")
+library(tidyverse)
+library(knitr)
+#library(ezknitr)
+library(rFIA)
+
+###################################################################################
+
+#' # 1.Download the FIA data for the 48 conterminous states ----
+#' 
+#' Read a CSV file containing the list of US states
+#' 
+#states<- read.csv("data/states_list.CSV")
+#'
+#states<-states[-c(2,3,10,13,14,38,43,52),] #Keep just the 48 lower states
+#'
+#states<-states[,2] #keep just the abbreviations column
+#states<-as.list(states) #convert it to a vector format
+#' 
+#' Get the FIA data from rFIA
+#'
+#' Check https://rfia.netlify.app/tutorial/bigdata/ for methods larger-than-RAM
+#'
+#getFIA(states = states, dir = 'H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA', load = FALSE, tables = c("PLOT", "COND", "TREE"), nCores=3)
+#'
+#FIA<-readFIA(dir = "H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA", tables = c("PLOT", "COND", "TREE"), states = NULL, inMemory = F, nCores = 3) #inMemory=FALSE helps conserve RAM and allows the user to produce estimates using very large datasets
+#'
+#'
+###################################################################################
+#' 
+ANN_INVYR<-read.csv("data/ANN_INV_START.CSV") #read the table with the dates for when each state started their inventory year
+ANN_INVYR <- ANN_INVYR[,c(1,4)] #leave just STATECD and ANN_INV_START
+#' 
+#' Set working directory where all the state files are located
+#'
+setwd("H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA") #set working directory to the subfolder where the CSV files are located
+#'
+#' Create a vector for the states
+#'   
+#states<-list.files("data/all_FIA/") #use this or the next line according to where your working directory is set
+states<-list.files()
+#'
+###################################################################################
+#' Create empty data frames for storing data on number of plots disturbed
+#' 
+cond_d_dataframe<-data.frame()
+dist_100_dataframe<-data.frame()
+dist_25_dataframe<-data.frame()
+dist_vis_dataframe<-data.frame()
+cond_vis_dataframe<-data.frame()
+cond_vis_all_dataframe<-data.frame()
+ag_dam_vis_dataframe<-data.frame()
+DAMAG_dataframe<-data.frame()
+
+#' Now create the loop
+for(i in 1:48){
+  FIA_TREE<-read.csv(states[3*i])
+  FIA_PLOT<-read.csv(states[(3*i)-1])
+  FIA_COND<-read.csv(states[(3*i)-2])
+  #'
+  #' Keep each identifier record different before combining tables
+  #'
+  colnames(FIA_PLOT)[1]<-"PLT_CN"
+  colnames(FIA_COND)[1]<-"COND_CN"
+  colnames(FIA_TREE)[1]<-"TREE_CN"
+  #'
+  #' Select variables of interest for each table
+  #' 
+  FIA_COND <- select(FIA_COND, PLT_CN, INVYR, STATECD, COUNTYCD, PLOT,COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3)
+  FIA_PLOT <- select(FIA_PLOT, PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE)
+  FIA_TREE <- select(FIA_TREE, TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP,CONDID, TREE, STATUSCD, SPCD, SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG)
+  #'
+  #' Merge the tables
+  #'
+  FIA_CP<-merge(FIA_PLOT, FIA_COND, by=c("STATECD","COUNTYCD","PLOT","INVYR", "PLT_CN")) #merge the plot and condition tables
+  #'
+  FIA_TP<- merge(FIA_TREE, FIA_PLOT, by=c("STATECD","COUNTYCD","PLOT","INVYR", "PLT_CN")) #merge tree and plot tables
+  #'
+  FIA_TC<- merge(FIA_TREE, FIA_COND, by=c("STATECD","COUNTYCD","PLOT","INVYR", "CONDID" ,"PLT_CN")) #merge the Tree and condition tables
+  #'
+  FIA_TCP<- merge(FIA_TC, FIA_PLOT, by=c("STATECD","COUNTYCD","PLOT","INVYR", "PLT_CN")) #merge the three tables
+  #'
+  #' 
+  #' Merge records with the ANN_INVYR table
+  #'
+  FIA_TCP<-merge(FIA_TCP, ANN_INVYR)
+  #' 
+  ###################################################################################
+  #' # DISTURBANCE VARIABLE COMPARISON
+  #' 
+  #' Tables created here are just for comparing the two disturbances variables. To differentiate the variables, we will call "diffused disturbance" to the disturbance variable created from the tree table. The original disturbance variable from the condition table will be called "condition disturbance". This variable has a 25% threshold, meaning that if the condition in the subplot has >=25% of the trees affected by a disturbance and more than 1 acre in size, it will be recorded as such, otherwise, it won't show as a disturbance
+  #'
+  #' Starting dataset: FIA_TCP 
+  #' 
+  FIA_TCP <- FIA_TCP%>% filter( DIA >= 5) #filter out trees that correspond to microplot
+  #'
+  FIA_TCP[is.na(FIA_TCP)] <- 0 #fill NA's with zeros
+  #'
+  #' Leave just observations from annual remeasurements (INVYR>= ANN_INY_START)
+  #' 
+  FIA_TCP$INVYR<-ifelse(FIA_TCP$INVYR>=FIA_TCP$ANN_INV_START, FIA_TCP$INVYR, 0)
+  #'
+  #' Now subset INVYR=0
+  #' 
+  FIA_TCP<-FIA_TCP%>% subset(INVYR>0)
+  #'
+  #' Create an ID
+  #' 
+  FIA_TCP$ID<- paste(FIA_TCP$STATECD, FIA_TCP$COUNTYCD, FIA_TCP$PLOT, FIA_TCP$INVYR, sep="_")
+  #'
+  ###################################################################################
+  # Condition disturbance table ----
+  #'
+  #' ## Now, let's compare is this new variable works better at capturing disturbances 
+  #' For doing this, we will compare the original 'condition-level disturbance variable' (COND_DIST) with the 'tree-level disturbance variable' (TREE_DIST) through a X^2 test.
+  #' There will be three categories in each variable: not disturbed (ND), simple disturbance (SD), and compound disturbance (CD)
+  #' 
+  FIA_TCP2 <-FIA_TCP
+  #' 
+  #' ### 2. Prepare the condition table
+  #'  
+  #'  First let's scale up to a plot level
+  #' 
+  #' Convert to long format
+  #' 
+  plot_FIA_CP <- FIA_TCP2 %>% pivot_longer(DSTRBCD1:DSTRBCD3,names_to="DSTRBCD" , values_to="DIST")
+  #'
+  #' Get unique observations for the dataset
+  #' 
+  plot_FIA_CP <- plot_FIA_CP %>% select(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID, DSTRBCD, DIST) #select variables of interest
+  #'
+  plot_FIA_CP<- unique(plot_FIA_CP) #unique observations for the dataset   
+  #'
+  cond_vis_all_dataframe<-rbind(cond_vis_all_dataframe,plot_FIA_CP)
+  #'
+  #' Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a disturbance
+  #' 
+  plot_FIA_CP$dist_count <- ifelse(plot_FIA_CP$DIST != 0, 1,0) 
+  #' 
+  #' Scaling to a plot level  
+  plot_FIA_CP<- plot_FIA_CP %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %>% 
+    summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from all the conditions in a plot. We might have a disturbance spreading on more than 1 condition
+  #'
+  #' Keep single disturbance records per plot
+  #' 
+  plot_FIA_CP$disturbance<- ifelse(plot_FIA_CP$disturbance != 0,1,0)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+  #'                  
+  #' Now we can scale up to a plot level:
+  #' 
+  plot_FIA_CP<- plot_FIA_CP %>% group_by(STATECD, COUNTYCD, PLOT, INVYR) %>% 
+    summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
+  #'
+  #' The logic here is that plots that were affected by more than one disturbance type (CD) will be represented with value >1 for the sum of disturbances (We already took care of repeated disturbance types per plot in the previous step). A value of 1 represents SD and a value of 0 represents ND
+  #' 
+  #' Now standardize the names ND=0, SD=1, CD >=2
+  #' 
+  plot_FIA_CP$disturbance <- ifelse(plot_FIA_CP$disturbance_sum == 0, "ND",
+                                   ifelse(plot_FIA_CP$disturbance_sum == 1 , "SD", "CD"))  
+  #' 
+  cond_vis_dataframe<-rbind(cond_vis_dataframe, plot_FIA_CP) 
+  #' 
+  cont_table_COND<- plot_FIA_CP %>% group_by(STATECD, disturbance) %>%
+    summarise(n_plots=n()) #get the number of plots per grouped category/disturbance type (SD, CD, ND)
+  #'
+  #'
+  cond_d_dataframe<-rbind(cond_d_dataframe, cont_table_COND)
+  #'
+  #' This disturbance variable identifies disturbances that affect 25% or more of trees in the condition
+  #' 
+  #' ########################################################################################
+  # Diffused disturbance table (tree) ----
+  #'
+  #' ## 3. Create diffuse disturbance variable
+  #' 
+  #' ### Create a disturbance variable per subplot per condid
+  #' 
+  #' ### 3.1. Prepare the table
+  #'
+  FIA_TCP3 <-FIA_TCP
+  #'
+  #' #### 3.2 Use the group_by and summarise functions to create a table containing disturbances and proportion of trees disturbed in each condition
+  #' 
+  DIST_SUBP_CONDID<- FIA_TCP3 %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID,AGENTCD)%>% #Agent of mortality will be our disturbance variable
+    summarise( N_TREES_DIA= n())
+  #'
+  #' Add a new column indicating the number of trees disturbed in each diameter class
+  #' 
+  DIST_SUBP_CONDID$N_DIST_TREES <- ifelse (DIST_SUBP_CONDID$AGENTCD == 0, 0, DIST_SUBP_CONDID$N_TREES_DIA)
+  #'
+  #' Rename AGENTCD variable to DIST_TYPE
+  #' 
+  colnames(DIST_SUBP_CONDID)[7] <- "DIST_TYPE"
+  #'
+  #' Now create a column that calculates the proportion of trees that were affected by a disturbance per condition in each plot
+  #' 
+  #' Calculate the number of disturbed trees. Group by inventory year, plot, condition id and disturbance type.   
+  #'
+  dist_condid<-DIST_SUBP_CONDID %>% group_by(STATECD, COUNTYCD, PLOT, INVYR,CONDID, ID ,DIST_TYPE)%>%
+    summarise(trees_dist= sum(N_DIST_TREES))
+  #'
+  #' Calculate the total number of trees per condid. Group by inventory year, plot, and condition id to 
+  #'  
+  condid<-DIST_SUBP_CONDID %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID)%>%
+    summarise(trees_tot= sum(N_TREES_DIA))
+  #' 
+  #' Now merge back the two tables and calculate the proportion of disturbed trees per condition id
+  #' 
+  disturbances_tree<- merge(dist_condid,condid, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR", "CONDID", "ID")) %>%
+    mutate(proportion=(trees_dist/trees_tot)*100)
+  #'
+  #'
+  #' ####################################################################################
+  # Diffused variable no proportion threshold ----
+  #' ####################################################################################
+  #' ## 4. All diffused disturbance
+  #' 
+  #' #### 4.1 Create a loop to number the disturbances that show in each condition (to keep multiple disturbances)
+  #' 
+  #' Create an ID for each condition per plot
+  #'
+  disturbances_tree$IDC <- paste(disturbances_tree$STATECD, disturbances_tree$COUNTYCD, disturbances_tree$PLOT, disturbances_tree$INVYR, disturbances_tree$CONDID, sep="_")
+  #'   
+  vec<-unique(disturbances_tree$IDC) #vector to use in the loop
+  #'
+  disturbances_tree$Dcode<-0 #create a column to store the numbers for disturbances occurrences 
+  #'
+  #' Order the disturbance codes
+  #' 
+  disturbances_tree<-disturbances_tree[order(disturbances_tree$DIST_TYPE, decreasing=T),]
+  #'
+  for(i in 1:length(vec)){
+    tempkey=vec[i]
+    counter=1
+    for(j in 1:nrow(disturbances_tree)){
+      if(disturbances_tree$IDC[j]==tempkey){
+        disturbances_tree$Dcode[j]=counter
+        counter=counter+1
+      }
+    }
+  }
+  #'
+  #'
+  #' Save the disturbance tree data frame to a cumulative data frame
+  #' 
+  dist_vis_dataframe<-rbind(dist_vis_dataframe, disturbances_tree)
+  #'
+  #'
+  #' Now convert the table to a wide format to identify the presence of simple vs compound disturbances
+  #' 
+  #' 
+  disturbancesTreeTable <- disturbances_tree %>%
+    pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
+  #'
+  #' Rename columns names (1,2... to dist1, dist2...)
+  #' 
+  disturbancesTreeTable<-disturbancesTreeTable %>% 
+    rename( "dist1"="1",
+            "dist2"="2",
+            "dist3"="3",
+            "dist4"="4")
+  #'
+  #' Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)
+  #'
+  disturbancesTreeTable[is.na(disturbancesTreeTable)] <- 0 #fill NA's with zeros
+  #'
+  head(disturbancesTreeTable)
+  #'
+  #' This table resembles the condition table with how disturbances are recorded per condid
+  #' 
+  #'  #### 4.2 Now let's scale up to a plot level (do same steps as in section 2 condition table creation)
+  #' 
+  #' Convert to long format
+  #' 
+  disturbancesTreeTable <- disturbancesTreeTable %>% pivot_longer(dist1:dist4,names_to="DSTRBCD" , values_to="DIST")
+  #'
+  #' Get unique observations for the dataset
+  #' 
+  disturbancesTreeTable <- unique(disturbancesTreeTable) #make sure we have unique observations for the dataset   
+  #'
+  #' Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a specific disturbance
+  #' 
+  disturbancesTreeTable$dist_count <- ifelse(disturbancesTreeTable$DIST != 0, 1,0) 
+  #'   
+  disturbancesTreeTable<- disturbancesTreeTable %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %>% 
+    summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from each condition in a plot
+  #'
+  disturbancesTreeTable$disturbance<- ifelse(disturbancesTreeTable$disturbance != 0,1,0)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+  #'                  
+  #' Now we can scale up to a plot level:
+  #' 
+  disturbancesTreeTable<- disturbancesTreeTable %>% group_by(STATECD, COUNTYCD, PLOT, INVYR) %>% 
+    summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
+  #'
+  #' The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value >1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND
+  #' 
+  #' Now standardize the names ND=0, SD=1, CD >=2
+  #' 
+  disturbancesTreeTable$disturbance <- ifelse(disturbancesTreeTable$disturbance_sum == 0, "ND",
+                                              ifelse(disturbancesTreeTable$disturbance_sum == 1 , "SD", "CD"))  
+  #' 
+  #' 
+  cont_table_TREE<- disturbancesTreeTable %>% group_by(STATECD, disturbance) %>%
+    summarise(n_plots=n())
+  #'
+  dist_100_dataframe<-rbind(dist_100_dataframe, cont_table_TREE)
+  #'
+  #'
+  #' ####################################################################################
+  # Diffused variable 25% threshold ----
+  #' ####################################################################################
+  #' 
+  #' ## 5. Diffused disturbance proportion 25% or higher
+  #' 
+  #' Now that we have the proportion of trees affected by each disturbance, we will make this table comparable with the condition disturbance variable. For that, reclassify every disturbance >=25% to disturbed and the ones <25% as not disturbed.
+  #' 
+  disturbances_tree25<- merge(dist_condid,condid, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR", "CONDID", "ID")) %>%
+    mutate(proportion=(trees_dist/trees_tot)*100) #create the proportion variable
+  #'
+  disturbances_tree25$DIST_TYPE<- ifelse(disturbances_tree25$proportion >= 25, disturbances_tree25$DIST_TYPE, 0 )
+  #'
+  #' Create an ID for each condition per plot
+  #'
+  disturbances_tree25$IDC <- paste(disturbances_tree25$STATECD, disturbances_tree25$COUNTYCD, disturbances_tree25$PLOT, disturbances_tree25$INVYR, disturbances_tree25$CONDID, sep="_")
+  #'   
+  vec<-unique(disturbances_tree25$IDC) #vector to use in the loop
+  #'
+  disturbances_tree25$Dcode<-0 #create a column to store the numbers for disturbances occurrences 
+  #'
+  #' Order the disturbance codes so the disturbances will be coded first
+  #' 
+  disturbances_tree25<-disturbances_tree25[order(disturbances_tree25$DIST_TYPE, decreasing=T),]
+  #'
+  for(i in 1:length(vec)){
+    tempkey=vec[i]
+    counter=1
+    for(j in 1:nrow(disturbances_tree25)){
+      if(disturbances_tree25$IDC[j]==tempkey){
+        disturbances_tree25$Dcode[j]=counter
+        counter=counter+1
+      }
+    }
+  }
+  #'
+  #' Now convert the table to a wide format to identify the presence of simple vs compound disturbances
+  #' 
+  #' 
+  disturbancesTreeTable25 <- disturbances_tree25 %>%
+    pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
+  #'
+  #' Rename columns names (1,2... to dist1, dist2...)
+  #' 
+  disturbancesTreeTable25<-disturbancesTreeTable25 %>% 
+    rename( "dist1"="1",
+            "dist2"="2",
+            "dist3"="3",
+            "dist4"="4")
+  #'
+  #' Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)
+  #'
+  disturbancesTreeTable25[is.na(disturbancesTreeTable25)] <- 0 #fill NA's with zeros
+  #'
+  #' This table resembles the condition table with how disturbances are recorded per condid
+  #' 
+  #'  Now let's scale up to a plot level
+  #' 
+  #' Convert to long format
+  #' 
+  disturbancesTreeTable25 <- disturbancesTreeTable25 %>% pivot_longer(dist1:dist4,names_to="DSTRBCD" , values_to="DIST")
+  #'
+  #' Get unique observations for the dataset
+  #' 
+  disturbancesTreeTable25 <- unique(disturbancesTreeTable25) #make sure we have unique observations for the dataset   
+  #'
+  #' Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a specific disturbance
+  #' 
+  disturbancesTreeTable25$dist_count <- ifelse(disturbancesTreeTable25$DIST != 0, 1,0) 
+  #'   
+  disturbancesTreeTable25<- disturbancesTreeTable25 %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %>% 
+    summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from each condition in a plot
+  #'
+  disturbancesTreeTable25$disturbance<- ifelse(disturbancesTreeTable25$disturbance != 0,1,0)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+  #'                  
+  #' Now we can scale up to a plot level:
+  #' 
+  disturbancesTreeTable25<- disturbancesTreeTable25 %>% group_by(STATECD, COUNTYCD, PLOT, INVYR) %>% 
+    summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
+  #'
+  #' The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value >1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND
+  #' 
+  #' Now standardize the names ND=0, SD=1, CD >=2
+  #' 
+  disturbancesTreeTable25$disturbance <- ifelse(disturbancesTreeTable25$disturbance_sum == 0, "ND",
+                                                ifelse(disturbancesTreeTable25$disturbance_sum == 1 , "SD", "CD"))  
+  #' 
+  #' 
+  cont_table_TREE25<- disturbancesTreeTable25 %>% group_by(STATECD, disturbance) %>%
+    summarise(n_plots=n())
+  #'
+ # 
+  dist_25_dataframe<-rbind(dist_25_dataframe, cont_table_TREE25)
+#'  
+  #' ########################################################################################
+  # Damage agent + agent of mortality table (tree) ----
+  #'
+  #' ## 5. Create diffuse disturbance variable
+  #' ### 5.1. Prepare the table
+  #'
+  FIA_TCP4 <-FIA_TCP 
+  
+  #' Convert to long format
+  #' 
+  DAM_AGENT <- FIA_TCP4 %>% pivot_longer(DAMAGE_AGENT_CD1:DAMAGE_AGENT_CD3,names_to="DAMAGE_AGENT" , values_to="DIST")
+  #'
+  #' Get unique observations for the dataset due to the NAs or zeros that were created through the pivot longer
+  #' 
+  DAM_AGENT <- DAM_AGENT %>% select(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID, TREE_CN,SUBP, TREE, DAMAGE_AGENT, DIST) #select variables of interest
+  #'
+  DAM_AGENT<- unique(DAM_AGENT) #unique observations for the dataset   
+  #'
+  #' Homogenize the damage agents codes with the disturbance categories
+  #' 
+  DAM_AGENT$D_AGENT_NAME<- ifelse(DAM_AGENT$DIST>=10000 & DAM_AGENT$DIST<19000 ,"Insect",
+                                              ifelse(DAM_AGENT$DIST>=19000 & DAM_AGENT$DIST<30000,"Disease",
+                                                     ifelse(DAM_AGENT$DIST>=30000 & DAM_AGENT$DIST<40000, "Fire",
+                                                            ifelse(DAM_AGENT$DIST>=41000 &  DAM_AGENT$DIST<50000,"Animal",
+                                                                   ifelse(DAM_AGENT$DIST>=50000 & DAM_AGENT$DIST<60000,"Weather",
+                                                                          ifelse(DAM_AGENT$DIST>=60000 & DAM_AGENT$DIST<70000,"Vegetation",
+                                                                                ifelse(DAM_AGENT$DIST>=71000 & DAM_AGENT$DIST <80000,"Silviculture",
+                                                                                       ifelse(DAM_AGENT$DIST==0,"Not disturbed","Other"))))))))
+  #'
+  
+  DAM_AGENT<-DAM_AGENT[,-c(10,11)] #Remove the columns damage agent type and its code to be able to merge it later with agent of mortality
+  #'
+  #' Now bring the agent of mortality table
+  #' 
+  #' 
+  AG_MORT <- FIA_TCP4 %>% select(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID, TREE_CN,SUBP, TREE, AGENTCD) #select variables of interest
+  #'
+  AG_MORT$D_AGENT_NAME<- ifelse(AG_MORT$AGENTCD>=10 & AG_MORT$AGENTCD<20 ,"Insect",
+                                ifelse(AG_MORT$AGENTCD>=20 & AG_MORT$AGENTCD<30,"Disease",
+                                       ifelse(AG_MORT$AGENTCD>=30 & AG_MORT$AGENTCD<40,"Fire",
+                                              ifelse(AG_MORT$AGENTCD>=40 & AG_MORT$AGENTCD<50,"Animal",
+                                                     ifelse(AG_MORT$AGENTCD>=50 & AG_MORT$AGENTCD<60,"Weather",
+                                                            ifelse(AG_MORT$AGENTCD>=60 & AG_MORT$AGENTCD<70,"Vegetation",
+                                                                   ifelse(AG_MORT$AGENTCD>=70 & AG_MORT$AGENTCD<80,"Other",
+                                                                          ifelse(AG_MORT$AGENTCD>=80 & AG_MORT$AGENTCD<90,"Silviculture", 
+                                                                                 ifelse(AG_MORT$AGENTCD==0,"Not disturbed", NA)))))))))
+    
+    
+    
+ AG_MORT<-AG_MORT[,-10]  #remove the code column to be able to merge it with the damage agent table 
+  #'
+  #' Merge the agent of mortality and the damage agent tables
+  #'
+  AG_MORT_DAM_AGENT<-rbind(AG_MORT, DAM_AGENT)
+  #'
+  #' #### 5.2 Use the group_by and summarise functions to create a table containing disturbances and proportion of trees disturbed in each condition
+  #' 
+  AG_DAM_CONDID<- AG_MORT_DAM_AGENT %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID,D_AGENT_NAME)%>% #Agent of mortality will be our disturbance variable
+    summarise( N_TREES_DIA= n())
+  #'
+  #' Add a new column indicating the number of trees disturbed in each diameter class
+  #' 
+  AG_DAM_CONDID$N_DIST_TREES <- ifelse (AG_DAM_CONDID$D_AGENT_NAME == "Not disturbed", 0, AG_DAM_CONDID$N_TREES_DIA)
+  #'
+  #' Rename D_AGENT_NAME variable to DIST_TYPE
+  #' 
+  colnames(AG_DAM_CONDID)[7] <- "DIST_TYPE"
+  #'
+  #' Now create a column that calculates the proportion of trees that were affected by a disturbance per condition in each plot
+  #' 
+  #' Calculate the number of disturbed trees. Group by inventory year, plot, condition id and disturbance type.   
+  #'
+  dist_condid<-AG_DAM_CONDID %>% group_by(STATECD, COUNTYCD, PLOT, INVYR,CONDID, ID ,DIST_TYPE)%>%
+    summarise(trees_dist= sum(N_DIST_TREES))
+  #'
+  #' Calculate the total number of trees per condid. Group by inventory year, plot, and condition id to 
+  #'  
+  condid<-AG_DAM_CONDID %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, CONDID, ID)%>%
+    summarise(trees_tot= sum(N_TREES_DIA))
+  #' 
+  #' Now merge back the two tables and calculate the proportion of disturbed trees per condition id
+  #' 
+  mort_dam_agent_tree<- merge(dist_condid,condid, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR", "CONDID", "ID")) %>%
+    mutate(proportion=(trees_dist/trees_tot)*100)
+  #'
+  #' Create a loop to number the disturbances that show in each condition (to keep multiple disturbances)
+  #' 
+  #' Create an ID for each condition per plot
+  #'
+  mort_dam_agent_tree$IDC <- paste(mort_dam_agent_tree$STATECD, mort_dam_agent_tree$COUNTYCD, mort_dam_agent_tree$PLOT, mort_dam_agent_tree$INVYR, mort_dam_agent_tree$CONDID, sep="_")
+  #'   
+  vec<-unique(mort_dam_agent_tree$IDC) #vector to use in the loop
+  #'
+  mort_dam_agent_tree$Dcode<-0 #create a column to store the numbers for disturbances occurrences 
+  #'
+  #' Order the disturbance codes
+  #' 
+  mort_dam_agent_tree<-mort_dam_agent_tree[order(mort_dam_agent_tree$DIST_TYPE, decreasing=T),]
+  #'
+  for(i in 1:length(vec)){
+    tempkey=vec[i]
+    counter=1
+    for(j in 1:nrow(mort_dam_agent_tree)){
+      if(mort_dam_agent_tree$IDC[j]==tempkey){
+        mort_dam_agent_tree$Dcode[j]=counter
+        counter=counter+1
+      }
+    }
+  }
+  #'
+  #'
+  #' Save the disturbance tree data frame to a cumulative data frame
+  #' 
+  ag_dam_vis_dataframe<-rbind(ag_dam_vis_dataframe, mort_dam_agent_tree)
+  #'
+ #DAMAGdisturbancesTreeTable<-mort_dam_agent_tree
+ # DAMAGdisturbancesTreeTable$Dcode3<-ifelse(DAMAGdisturbancesTreeTable$Dcode==1, "dist1",
+ #                                     ifelse(DAMAGdisturbancesTreeTable$Dcode==2, "dist2",
+ #                                            ifelse(DAMAGdisturbancesTreeTable$DCode==3, "dist3",
+#                                                    ifelse(DAMAGdisturbancesTreeTable$Dcode==4, "dist4",
+#                                                           ifelse(DAMAGdisturbancesTreeTable$Dcode==5, "dist5",
+#                                                                  ifelse(DAMAGdisturbancesTreeTable$Dcode==6, "dist6", "dist7"))))))
+                                      
+                                      #'
+  #' Now convert the table to a wide format to identify the presence of simple vs compound disturbances
+  #' 
+  #' 
+  DAMAGdisturbancesTreeTable <- mort_dam_agent_tree %>%
+    pivot_wider(names_from = Dcode, values_from = DIST_TYPE, id_cols=c(STATECD, COUNTYCD, PLOT, INVYR, CONDID, IDC)) #convert to a wide format to identify compound disturbances
+  #'
+  #' Rename columns names (1,2... to dist1, dist2...)
+  #DAMAGdisturbancesTreeTable<-DAMAGdisturbancesTreeTable %>% 
+  #  rename( "dist1"="1",
+  #          "dist2"="2",
+  #          "dist3"="3",
+  #          "dist4"="4",
+  #          "dist5"="5",
+  #          "dist6"="6",
+  #          "dist7"="7")
+  #'
+  #' Now create a column that identifies if a plot had a single (SD), compound (CD) or no disturbance (ND)
+  #'
+  DAMAGdisturbancesTreeTable[is.na(DAMAGdisturbancesTreeTable)] <- "Not disturbed" #fill NA's with zeros
+  #'
+  #'
+  #' This table resembles the condition table with how disturbances are recorded per condid
+  #' 
+  #'  #### 6.2 Now let's scale up to a plot level (do same steps as in section 2 condition table creation)
+  #' 
+  #' Convert to long format
+  #' 
+  DAMAGdisturbancesTreeTable <- DAMAGdisturbancesTreeTable %>% pivot_longer(cols=-c(1:6),names_to="DSTRBCD" , values_to="DIST")
+  #'
+  #' Get unique observations for the dataset
+  #' 
+  DAMAGdisturbancesTreeTable <- unique(DAMAGdisturbancesTreeTable) #make sure we have unique observations for the dataset   
+  #'
+  #' Create a new column with numbers 1 for presence of a disturbance and 0 for absence of a specific disturbance
+  #' 
+  DAMAGdisturbancesTreeTable$dist_count <- ifelse(DAMAGdisturbancesTreeTable$DIST == "Not disturbed", 0,1) 
+  #'   
+  DAMAGdisturbancesTreeTable<- DAMAGdisturbancesTreeTable %>% group_by(STATECD, COUNTYCD, PLOT, INVYR, DIST ) %>% 
+    summarise (disturbance = sum(dist_count, na.rm=T)) #it is adding up the presence of the same disturbances from each condition in a plot
+  #'
+  DAMAGdisturbancesTreeTable$disturbance<- ifelse(DAMAGdisturbancesTreeTable$disturbance == 0, 0,1)#because we just want the disturbances in each plot and are not interested in repeated disturbances in a plot (if condition 1 and 2 had fire for example, we want to record it just once for the plot)
+  #'                  
+  #' Now we can scale up to a plot level:
+  #' 
+  DAMAGdisturbancesTreeTable<- DAMAGdisturbancesTreeTable %>% group_by(STATECD, COUNTYCD, PLOT, INVYR) %>% 
+    summarise (disturbance_sum = sum(disturbance, na.rm=T)) 
+  #'
+  #' The logic here is that plots that were affected by more than one disturbance (CD) will be represented with value >1 for the sum of disturbances. A value of 1 represents SD and a value of 0 represents ND
+  #' 
+  #' Now standardize the names ND=0, SD=1, CD >=2
+  #' 
+  DAMAGdisturbancesTreeTable$disturbance <- ifelse(DAMAGdisturbancesTreeTable$disturbance_sum == 0, "ND",
+                                              ifelse(DAMAGdisturbancesTreeTable$disturbance_sum == 1 , "SD", "CD"))  
+  #' 
+  #' 
+  DAMAGcont_table_TREE<- DAMAGdisturbancesTreeTable %>% group_by(STATECD, disturbance) %>%
+    summarise(n_plots=n())
+  #'
+  DAMAG_dataframe<-rbind(DAMAG_dataframe, DAMAGcont_table_TREE)
+  #'
+  
+  }
+
+################################################################################################################
+#' #### Save the tables as CSV files ----
+#'
+setwd("H:/FIA_Wisconsin/Landis_Density_Succession") #set working directory to the subfolder where the CSV files are located
+#'
+#'   
+#write.csv(cond_d_dataframe,'data//condition_disturbance_database.CSV')
+#write.csv(dist_100_dataframe,'data//diffused_disturbance100_database.CSV')
+#write.csv(dist_25_dataframe,'data//diffused_disturbance25_database.CSV')
+#write.csv(dist_vis_dataframe,'data//diffused_disturbance_visualization_database.CSV')
+#write.csv(cond_vis_dataframe,'data//cond_vis_database.CSV')
+#write.csv(cond_vis_all_dataframe,'data//cond_vis_all_database.CSV')
+#write.csv(ag_dam_vis_dataframe,'data//ag_dam_vis_dataframe.CSV')
+#write.csv(DAMAG_dataframe,'data//DAMAG_dataframe.CSV')
+#'
+#'
+################################################################################################################
+# Read in the files (when we open a new session)----
+#'
+#' Read part 1:
+#'
+ag_dam_vis_dataframe1<-read.csv('data/part1/ag_dam_vis_dataframe_part1.CSV')
+cond_vis_all_dataframe1<-read.csv('data/part1/cond_vis_all_database_part1.CSV')
+cond_vis_database1<- read.csv('data/part1/cond_vis_database_part1.CSV')
+cond_d_dataframe1<-read.csv('data/part1/condition_disturbance_database_part1.CSV')
+DAMAG_dataframe1<-read.csv('data/part1/DAMAG_dataframe_part1.CSV')
+dist_vis_dataframe1<- read.csv('data/part1/diffused_disturbance_visualization_database_part1.CSV')
+dist_25_dataframe1<-read.csv('data/part1/diffused_disturbance25_database_part1.CSV')
+dist_100_dataframe1<-read.csv('data/part1/diffused_disturbance100_database_part1.CSV')
+#'
+#'
+ag_dam_vis_dataframe1<-ag_dam_vis_dataframe1[,-1] #delete the automatic X column generated when reading in the file
+cond_vis_all_dataframe1<-cond_vis_all_dataframe1[,-1]
+cond_vis_database1<-cond_vis_database1[,-1]
+cond_d_dataframe1<-cond_d_dataframe1[,-1]
+DAMAG_dataframe1<-DAMAG_dataframe1[,-1]
+dist_vis_dataframe1<-dist_vis_dataframe1[,-1]
+dist_25_dataframe1<-dist_25_dataframe1[,-1]
+dist_100_dataframe1<-dist_100_dataframe1[,-1]
+#'
+#' Read part 2: 
+#'
+ag_dam_vis_dataframe2<-read.csv('data/part2/ag_dam_vis_dataframe2.CSV')
+cond_vis_all_dataframe2<-read.csv('data/part2/cond_vis_all_database2.CSV')
+cond_vis_database2<- read.csv('data/part2/cond_vis_database2.CSV')
+cond_d_dataframe2<-read.csv('data/part2/condition_disturbance_database2.CSV')
+DAMAG_dataframe2<-read.csv('data/part2/DAMAG_dataframe2.CSV')
+dist_vis_dataframe2<- read.csv('data/part2/diffused_disturbance_visualization_database2.CSV')
+dist_25_dataframe2<-read.csv('data/part2/diffused_disturbance25_database2.CSV')
+dist_100_dataframe2<-read.csv('data/part2/diffused_disturbance100_database2.CSV')
+#'
+#'
+ag_dam_vis_dataframe2<-ag_dam_vis_dataframe2[,-1] #delete the automatic X column generated when reading in the file
+cond_vis_all_dataframe2<-cond_vis_all_dataframe2[,-1]
+cond_vis_database2<-cond_vis_database2[,-1]
+cond_d_dataframe2<-cond_d_dataframe2[,-1]
+DAMAG_dataframe2<-DAMAG_dataframe2[,-1]
+dist_vis_dataframe2<-dist_vis_dataframe2[,-1]
+dist_25_dataframe2<-dist_25_dataframe2[,-1]
+dist_100_dataframe2<-dist_100_dataframe2[,-1]
+#' 
+#' 
+#' Merge the datasets:
+#'
+ag_dam_vis_dataframe<-rbind(ag_dam_vis_dataframe1, ag_dam_vis_dataframe2)
+cond_vis_all_dataframe<-rbind(cond_vis_all_dataframe1,cond_vis_all_dataframe2)
+cond_vis_database<-rbind(cond_vis_database1, cond_vis_database2)
+cond_d_dataframe<-rbind(cond_d_dataframe1, cond_d_dataframe2)
+DAMAG_dataframe<-rbind(DAMAG_dataframe1, DAMAG_dataframe2)
+dist_vis_dataframe<-rbind(dist_vis_dataframe1, dist_vis_dataframe2)
+dist_25_dataframe<-rbind(dist_25_dataframe1, dist_25_dataframe2)
+dist_100_dataframe<-rbind(dist_100_dataframe1, dist_100_dataframe2)
+#'
+#'
+#' ####################################################################################
+# Visualization ----
+#' ####################################################################################
+#'
+#' ## Represent proportion of conditions disturbed per disturbance type
+#'
+#' First rename the disturbance types
+#' 
+#'  For the diffused disturbances variable
+#'  
+dist_vis_dataframe$agent_mortality<- ifelse(dist_vis_dataframe$DIST_TYPE>=10 & dist_vis_dataframe$DIST_TYPE<20 ,"Insect",
+                                           ifelse(dist_vis_dataframe$DIST_TYPE>=20 & dist_vis_dataframe$DIST_TYPE<30,"Disease",
+                                                  ifelse(dist_vis_dataframe$DIST_TYPE>=30 & dist_vis_dataframe$DIST_TYPE<40,"Fire",
+                                                         ifelse(dist_vis_dataframe$DIST_TYPE>=40 & dist_vis_dataframe$DIST_TYPE<50,"Animal",
+                                                                ifelse(dist_vis_dataframe$DIST_TYPE>=50 & dist_vis_dataframe$DIST_TYPE<60,"Weather",
+                                                                       ifelse(dist_vis_dataframe$DIST_TYPE>=60 & dist_vis_dataframe$DIST_TYPE<70,"Vegetation",
+                                                                              ifelse(dist_vis_dataframe$DIST_TYPE>=70 & dist_vis_dataframe$DIST_TYPE<80,"Other",
+                                                                                     ifelse(dist_vis_dataframe$DIST_TYPE>=80 & dist_vis_dataframe$DIST_TYPE<90,"Silviculture", 
+                                                                                            ifelse(dist_vis_dataframe$DIST_TYPE==0,"Not disturbed", NA)))))))))
+#'
+#'
+#' Remove the non disturbed category
+#' 
+dist_vis_dataframe<- dist_vis_dataframe %>% filter(agent_mortality != "Not disturbed")
+#'
+#' For the condition level variable
+#' 
+cond_vis_all_dataframe$DIST<- ifelse(cond_vis_all_dataframe$DIST>=10 & cond_vis_all_dataframe$DIST<20 ,"Insect",
+                                            ifelse(cond_vis_all_dataframe$DIST>=20 & cond_vis_all_dataframe$DIST<30,"Disease",
+                                                   ifelse(cond_vis_all_dataframe$DIST>=30 & cond_vis_all_dataframe$DIST<40,"Fire",
+                                                          ifelse(cond_vis_all_dataframe$DIST>=40 & cond_vis_all_dataframe$DIST<50,"Animal",
+                                                                 ifelse(cond_vis_all_dataframe$DIST>=50 & cond_vis_all_dataframe$DIST<60,"Weather",
+                                                                        ifelse(cond_vis_all_dataframe$DIST>=60 & cond_vis_all_dataframe$DIST<70,"Vegetation",
+                                                                               ifelse(cond_vis_all_dataframe$DIST>=70 & cond_vis_all_dataframe$DIST<80,"Other",
+                                                                                      ifelse(cond_vis_all_dataframe$DIST>=80 & cond_vis_all_dataframe$DIST<90,"Silviculture", 
+                                                                                             ifelse(cond_vis_all_dataframe$DIST==0,"Not disturbed", NA)))))))))
+#'
+#'
+#'
+#' Merge the state names with the table
+#' 
+statecd<-read.csv('data/states_codes.csv')
+dist_vis_dataframe<-merge(statecd, dist_vis_dataframe, by='STATECD')
+#'
+#'
+#' ### Boxplots
+#'
+#' For all the states combined
+#'
+p.box <- ggplot(dist_vis_dataframe, aes(x= agent_mortality, y=proportion)) +
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion of trees disturbed in %")+theme_classic()+
+  #theme(axis.text=element_text(size=20, color="black"),
+  #      axis.title=element_text(size=20,face="bold"),
+  #      strip.text.x = element_text(size = 20))+
+        geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  theme(panel.background = element_rect(fill="white"),axis.text=element_text(size=30, color="black"),axis.title=element_text(size=32,face="bold"))
+#'
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box, file="figures/disturbances/proportion_disturbances.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances.tiff", plot = p.box, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#'
+#' For each state by FIA region
+#' 
+#' Read the dataframe for the regions
+#' 
+regions<-read.csv("data/FIA_NATIONAL_FOREST_SERVICE_REGIONS.CSV")
+#'
+#' Merge the dataframes and filter regions
+r1<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R1")
+r2<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R2")
+r3<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R3")
+r4<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R4")
+r5<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R5")
+r6<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R6")
+r8<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R8")
+r9<-merge(dist_vis_dataframe, regions, by=c("STATECD", "State", "Abbreviation"))%>% filter(R_Abb=="R9")
+#' 
+#' Region 1: Northern
+#'
+p.box_R1 <- ggplot(r1, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=28, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R1, file="figures/disturbances/proportion_disturbances_R1.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R1.tiff", plot = p.box_R1, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 2: Rocky Mountain
+#'
+p.box_R2 <- ggplot(r2, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=22, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R2, file="figures/disturbances/proportion_disturbances_R2.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R2.tiff", plot = p.box_R2, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 3: Southwestern
+#'
+p.box_R3 <- ggplot(r3, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=28, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R3, file="figures/disturbances/proportion_disturbances_R3.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R3.tiff", plot = p.box_R3, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 4: Intermountain
+#'
+p.box_R4 <- ggplot(r4, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=22, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R4, file="figures/disturbances/proportion_disturbances_R4.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R4.tiff", plot = p.box_R4, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 5: Pacific Southwest
+#'
+p.box_R5 <- ggplot(r5, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=28, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R5, file="figures/disturbances/proportion_disturbances_R5.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R5.tiff", plot = p.box_R5, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 6: Pacific Northwest
+#'
+p.box_R6 <- ggplot(r6, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=28, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R6, file="figures/disturbances/proportion_disturbances_R6.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R6.tiff", plot = p.box_R6, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 8: Southern
+#'
+p.box_R8 <- ggplot(r8, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=18, color="black", angle=20),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R8, file="figures/disturbances/proportion_disturbances_R8.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R8.tiff", plot = p.box_R8, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' Region 9: Eastern
+#'
+p.box_R9 <- ggplot(r9, aes(x= agent_mortality, y=proportion)) + theme_bw()+
+  geom_boxplot(color="black", fill="gray",)+xlab("Disturbance type")+ylab("Proportion trees disturbed in %")+
+  theme(axis.text=element_text(size=16, color="black", angle=40),
+        axis.title=element_text(size=34,face="bold"),
+        legend.key.size = unit(5,"line"),
+        strip.text.x = element_text(size = 28))+
+  geom_hline(yintercept=25, linetype="dashed", color = "red", size=2)+
+  facet_wrap(~State)
+#'
+#' Save the boxplot to a tiff format
+#' 
+#ggsave(p.box_R9, file="figures/disturbances/proportion_disturbances_R9.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/proportion_disturbances_R9.tiff", plot = p.box_R9, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#' ####################################################################################
+# Chi square tests ----
+#' ####################################################################################
+#' 
+#' ## Perform tests of independence
+#' 
+#' Create the tables for 3 types of comparisons:
+#' A) Condition disturbance vs agent of mortality
+#' B) Condition disturbance vs agent of mortality 25% threshold
+#' C) Condition disturbance, agent of mortality + damage code
+#' D) Condition disturbance, agent of mortality, agent of mortality at 25% threshold, and agent of mortality + damage code
+#' 
+#' 
+#' 
+#' ### Merge the tables
+#'
+#' #### A) Condition disturbance vs agent of mortality
+cont_tableA<- merge(cond_d_dataframe,dist_100_dataframe, by=c("STATECD", "disturbance"))
+#'
+#' Rename the columns
+names(cont_tableA)<-c("State", "Disturbance", "Condition_table", "Agent_mortality")
+#'
+#' Test for all states added up condition
+#'
+#' Add up the plot counts from all the 48 states
+#'
+cont_tableA_48US<-cont_tableA %>% group_by(Disturbance) %>% 
+  summarize(Condition=sum(Condition_table),
+            Ag_mortality100=sum(Agent_mortality))
+#'
+#' #### Now perform the Chi square independent tests with an alpha of 0.05.
+#'
+#' Ho: There is no association between variables (they are independent)./ The way we build the disturbance variable is independent from the result
+#' 
+#' Ha: There is an association between variables
+#'   
+print(x_cond_diffA<-cont_tableA_48US[,c(2,3)] %>% chisq.test()) #pick columns 2,3 to make it a contingency table
+#'
+#' As p-value <0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference 
+#'   
+#'   
+#' #### B) Condition disturbance vs agent of mortality 25% threshold  
+cont_tableB<- merge(cond_d_dataframe,dist_25_dataframe, by=c("STATECD", "disturbance"))
+#'
+#' Rename the columns
+names(cont_tableB)<-c("State", "Disturbance", "Condition_table", "Agent_mortality_25")
+#'
+#' Test for all states added up condition
+#'
+#' Add up the plot counts from all the 48 states
+#'
+cont_tableB_48US<-cont_tableB %>% group_by(Disturbance) %>% 
+  summarize(Condition=sum(Condition_table),
+            Ag_mortality25=sum(Agent_mortality_25))
+#'
+#' #### Now perform the Chi square independent tests with an alpha of 0.05.
+#'
+#' Ho: There is no association between variables (they are independent)./ The way we build the disturbance variable is independent from the result
+#' 
+#' Ha: There is an association between variables
+#'   
+print(x_cond_diffB<-cont_tableB_48US[,c(2,3)] %>% chisq.test()) #pick columns 2,3 to make it a contingency table
+#'
+#' As p-value <0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference 
+#'    
+#' #### C) Condition disturbance, agent of mortality + damage code
+cont_tableC<- merge(cond_d_dataframe,DAMAG_dataframe, by=c("STATECD", "disturbance"))
+#'
+#' Rename the columns
+names(cont_tableC)<-c("State", "Disturbance", "Condition_table", "Agent_mortality_damage")
+#'
+#' Test for all states added up condition
+#'
+#' Add up the plot counts from all the 48 states
+#'
+cont_tableC_48US<-cont_tableC %>% group_by(Disturbance) %>% 
+  summarize(Condition=sum(Condition_table),
+            Ag_mort_damage=sum(Agent_mortality_damage))
+#'
+#' #### Now perform the Chi square independent tests with an alpha of 0.05.
+#'
+#' Ho: There is no association between variables (they are independent)./ The way we build the disturbance variable is independent from the result
+#' 
+#' Ha: There is an association between variables
+#'   
+print(x_cond_diffC<-cont_tableC_48US[,c(2,3)] %>% chisq.test()) #pick columns 2,3 to make it a contingency table
+#'
+#' As p-value <0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference 
+#' 
+#' #### D) Condition disturbance, agent of mortality, agent of mortality 25%, and agent of mortality + damage code 
+cont_tableD<- merge(cond_d_dataframe, dist_100_dataframe, by=c("STATECD", "disturbance"), all.x = T, all.y=T)
+#' Rename the columns
+names(cont_tableD)<-c("STATECD", "disturbance", "n_plotsC", "n_plotsAG")
+#'
+cont_tableD<- merge(cont_tableD, dist_25_dataframe, by=c("STATECD", "disturbance"), all.x = T, all.y=T)
+#' Rename the columns
+names(cont_tableD)<-c("STATECD", "disturbance", "n_plotsC", "n_plotsAG", "n_plotsAG25")
+#'
+cont_tableD<- merge(cont_tableD,DAMAG_dataframe, by=c("STATECD", "disturbance"), all.x = T, all.y=T)
+#' Rename the columns
+names(cont_tableD)<-c("STATECD", "disturbance", "n_plotsC", "n_plotsAG", "n_plotsAG25", "n_plots_DAMAG")
+#'
+#' Test for all states added up
+#'
+#' Add up the plot counts from all the 48 states
+#'
+cont_tableD_48US<-cont_tableD %>% group_by(disturbance) %>% 
+  summarize(Condition=sum(n_plotsC, na.rm = T),
+            Ag_mortality100=sum(n_plotsAG, na.rm = T),
+            Ag_mortality25=sum(n_plotsAG25, na.rm = T),
+            Damage_ag_mort=sum(n_plots_DAMAG, na.rm = T))
+#'
+#' #### Now perform the Chi square independent tests with an alpha of 0.05.
+#'
+#' Ho: There is no association between variables (they are independent)./ The way we build the disturbance variable is independent from the result
+#' 
+#' Ha: There is an association between variables
+#'   
+print(x_cond_diffC<-cont_tableD_48US[,c(2,3,4,5)] %>% chisq.test()) #pick columns 2,3 to make it a contingency table
+#'
+#' As p-value <0.05, we reject Ho, therefore we conclude there is an association between the variables. In other words, the way we calculate the disturbance variable makes a difference 
+#' 
+#' ###############################################
+#' Histogram ---- 
+#' ###############################################
+#' 
+long<-cont_tableD_48US %>% pivot_longer(Condition:Damage_ag_mort, names_to="Type_variable", values_to="n_plots")
+#' 
+hist<-ggplot(long, aes(x=disturbance))+
+  geom_bar(aes(y=n_plots, fill=Type_variable), stat="identity", position="dodge")
+#'
+#ggsave(hist, file="figures/disturbances/hist_disturbance_variables.jpg", width=7, height=4)
+#'
+#ggsave(file="figures/disturbances/hist_disturbance_variables.tiff", plot = hist, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#'   
+#' ##############################################
+#' Test for each state individually condition disturbance vs diffused disturbance complete ----
+#' ##############################################
+#'
+#' A) Condition disturbance vs agent of mortality
+#'
+test_M_A<-cont_tableA%>%
+  pivot_longer(Condition_table:Agent_mortality,names_to="Variable") #Convert the table to a long format
+
+test_M_A <- test_M_A %>%
+  group_by(State) %>% #group by state as we want a chisq test for every state
+  nest() %>%
+  mutate(M = map(data, function(dat){ #convert the dataset to a nested matrix
+    dat2 <- dat %>% spread(Disturbance, value)
+    M <- as.matrix(dat2[, -1])
+    row.names(M) <- dat2$Variable
+    return(M)
+  }))
+
+#'
+test_M_A$M[[1]] #test the matrix with the first level
+#'
+testA <- test_M_A %>% #run the chi square for every level of the matrix
+  mutate(pvalue = map_dbl(M, ~chisq.test(.x)$p.value)) %>%
+  select(-data, -M) %>%
+  ungroup()
+#'
+#write.csv(testA,'data//disturbances_chi_test_A.CSV')
+#'
+#' B) Condition disturbance vs agent of mortality 25% threshold
+#'
+test_M_B<-cont_tableB%>%
+  pivot_longer(Condition_table:Agent_mortality_25,names_to="Variable")
+
+test_M_B <- test_M_B %>%
+  group_by(State) %>%
+  nest() %>%
+  mutate(M = map(data, function(dat){
+    dat2 <- dat %>% spread(Disturbance, value)
+    M <- as.matrix(dat2[, -1])
+    row.names(M) <- dat2$Variable
+    return(M)
+  }))
+
+#'
+test_M_B$M[[1]]
+#'
+testB <- test_M_B %>%
+  mutate(pvalue = map_dbl(M, ~chisq.test(.x)$p.value)) %>%
+  select(-data, -M) %>%
+  ungroup()
+#'
+#write.csv(testB,'data//disturbances_chi_test_B.CSV')
+#'
+#' C) Condition disturbance, agent of mortality + damage code
+#'
+test_M_C<-cont_tableC%>%
+  pivot_longer(Condition_table:Agent_mortality_damage,names_to="Variable")
+
+test_M_C <- test_M_C %>%
+  group_by(State) %>%
+  nest() %>%
+  mutate(M = map(data, function(dat){
+    dat2 <- dat %>% spread(Disturbance, value)
+    M <- as.matrix(dat2[, -1])
+    row.names(M) <- dat2$Variable
+    return(M)
+  }))
+#'
+test_M_C$M[[1]]
+#'
+testC <- test_M_C %>%
+  mutate(pvalue = map_dbl(M, ~chisq.test(.x)$p.value)) %>%
+  select(-data, -M) %>%
+  ungroup()
+#'
+#write.csv(testC,'data//disturbances_chi_test_C.CSV')
+#'  
+#' D) Condition disturbance, agent of mortality, agent of mortality 25%, and agent of mortality + damage code 
+#'
+test_M_D<-cont_tableD%>%
+  pivot_longer(n_plotsC:n_plots_DAMAG,names_to="Variable")
+#'
+test_M_D$value[is.na(test_M_D$value)] <- 0 # Filling the missing values with zeros
+#'
+test_M_D <- test_M_D %>%
+  group_by(STATECD) %>%
+  nest() %>%
+  mutate(M = map(data, function(dat){
+    dat2 <- dat %>% spread(disturbance, value)
+    M <- as.matrix(dat2[, -1])
+    row.names(M) <- dat2$Variable
+    return(M)
+  }))
+#'
+test_M_D$M[[1]]
+#'
+testD <- test_M_D %>%
+  mutate(pvalue = map_dbl(M, ~chisq.test(.x)$p.value)) %>%
+  select(-data, -M) %>%
+  ungroup()
+#'
+#write.csv(testD,'data//disturbances_chi_test_D.CSV')    
+#' ####################################################################################
+# Maps ----
+#' ####################################################################################
+#install.packages("GISTools")
+#install.packages("sp")
+#install.packages("raster", dependencies=T)
+#install.packages("rgdal", dependencies=T)
+#install.packages("tigris", dependencies=T)
+#install.packages("sf")
+#install.packages("leaflet")
+#install.packages("mapview")
+#' install.packages("maps") 
+#' install.packages("ggspatial")
+library(maps)
+library(GISTools)
+library(sp)
+library(raster)
+library(rgdal)
+library(sf)
+library(leaflet)
+library(mapview)
+library(ggspatial)
+#'
+#' #### Get the plot coordinates for the 48 states
+#'
+#' Create empty data frames for storing data on number of plots disturbed
+#' 
+coordinates<-data.frame() #empty dataframe that will store the coordinate values for all the states
+states_plot<-list.files(path='H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA',pattern="_PLOT")
+#'
+setwd("H:/FIA_Wisconsin/Landis_Density_Succession/data/all_FIA") #set working directory to the subfolder where the CSV files are located
+#'   Now create the loop
+for(i in 1:48){
+  PLOT_df<-read.csv(states_plot[i])
+  #PLOT_df<-subset(PLOT_df, INVYR >= 2000) # Subset to just keep records from 2000 on
+  colnames(PLOT_df)[1]<-"PLT_CN"
+  PLOT_df <- PLOT_df %>% select(PLT_CN, STATECD, COUNTYCD, PLOT, INVYR, LAT, LON)# Select variables of interest
+  coordinates<-rbind(coordinates, PLOT_df)}
+#'
+setwd("H:/FIA_Wisconsin/Landis_Density_Succession") #set working directory back to where the project is
+#'
+#write.csv(coordinates,'data//PLOT_FIA_coordinates.CSV')
+#'
+coordinates<-read.csv("data/PLOT_FIA_coordinates.CSV")
+coordinates<-coordinates[,-1]#remove the x column automatically created when writing the file
+#'
+#' Merge the coordinates with the previous database containing disturbance information
+disturbances_plots_coordinates<-merge(dist_vis_dataframe, coordinates, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
+#'
+condition_plots_coordinates<-merge(cond_vis_all_dataframe, coordinates, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
+#'
+damage_agent_plots_coordinates<-merge(ag_dam_vis_dataframe, coordinates, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
+#'
+#' Filter out not disturbed plots
+#' 
+condition_plots_coordinates<-condition_plots_coordinates%>% filter(DIST != "Not disturbed")
+damage_agent_plots_coordinates <-damage_agent_plots_coordinates %>% filter(DIST_TYPE != "Not disturbed")
+disturbances_plots_coordinates <-disturbances_plots_coordinates %>% filter(Dcode != 0)
+#'
+#'
+#'This will be run online
+#'
+#' Map #1 Diffused disturbances
+#map1<-mapview(disturbances_plots_coordinates, xcol = "LON", ycol = "LAT", crs = 5070, grid = FALSE)
+#'
+#' Map #2 Condition-level disturbances
+#map2<-mapview(condition_plots_coordinates, xcol = "LON", ycol = "LAT", crs = 5070, grid = FALSE)
+#'
+#' Save the map
+#mapshot(map1, file = "map_diffused_dis.png")
+#mapshot(map1, url = "map_diffused_dis.html")
+#'
+#mapshot(map2, file = "map_condition_dis.png")
+#mapshot(map2, url = "map_condition_dis.html")
+#'
+#' Now do the classic method of a static map
+#' 
+#' For the condition level disturbance variable
+#' 
+#coordinates(condition_plots_coordinates)=c("LON","LAT") #not using this for the selected method in ggplot
+#crs.geo1=CRS("+proj=longlat")
+#proj4string(condition_plots_coordinates)= crs.geo1
+#'
+#' For the diffused level disturbance variable
+#' 
+#coordinates(disturbances_plots_coordinates)=c("LON","LAT")
+#crs.geo1=CRS("+proj=longlat")
+#proj4string(disturbances_plots_coordinates)= crs.geo1
+#'
+#' Create a shapefile with data from the US
+#' 
+US<-map_data(map="state") #create a dataframe with states polygons
+#'
+#' US condition disturbance
+#'
+#'
+p1<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=condition_plots_coordinates, aes(x=LON, y=LAT, color=DIST))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#' US agent of mortality
+p2<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disturbances_plots_coordinates, aes(x=LON, y=LAT, color=agent_mortality))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#' US agent of mortality + damage agent
+p3<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=damage_agent_plots_coordinates, aes(x=LON, y=LAT, color=DIST_TYPE))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#'
+#' ###################################################
+# Case study FIRE ----
+#'  in California, Oregon, Washington
+#' ###################################################
+#' 
+FIRE<-map_data(map="state", region=c("California", "Oregon", "Washington")) #create a dataframe with states polygons
+#'
+fire_data<-disturbances_plots_coordinates%>% filter(STATECD==c(6,41,53)) %>% filter (agent_mortality=="Fire")
+#'
+fire_data_cond<-condition_plots_coordinates %>% filter(STATECD==c(6,41,53)) %>% filter (DIST=="Fire")
+#'
+fire_data_damag<-damage_agent_plots_coordinates %>% filter(STATECD==c(6,41,53)) %>% filter (DIST_TYPE=="Fire")
+#'
+#'
+#'
+pfire<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=fire_data, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=FIRE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pfire_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=fire_data_cond, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=FIRE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+pfire_damage<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=fire_data_damag, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=FIRE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+#'       
+#' ###################################################
+# Case study INSECTS ----
+#' in Maine, New Hampshire, Vermont, Massachusetts, Rhode Island, Connecticut, New York, Pennsylvania, New Jersey
+#' ###################################################
+#'
+INSECTS<-map_data(map="state", region=c("Maine", "New Hampshire", "Vermont", "Massachusetts", "Rhode Island", "Connecticut", "New York", "Pennsylvania", "New Jersey")) #create a dataframe with states polygons
+#'
+insects_data<-disturbances_plots_coordinates%>% filter(STATECD==c(23,33,50,25,44,9,36,42,34)) %>% filter (agent_mortality=="Insect")
+#'
+insects_data_cond<-condition_plots_coordinates%>% filter(STATECD==c(23,33,50,25,44,9,36,42,34)) %>% filter (DIST=="Insect")
+#'
+insects_data_damag<-damage_agent_plots_coordinates%>% filter(STATECD==c(23,33,50,25,44,9,36,42,34)) %>% filter (DIST_TYPE=="Insect")
+#'
+#'
+#'
+pinsects<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=insects_data, aes(x=LON, y=LAT), color="black")+
+  geom_polygon(data=INSECTS, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pinsects_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=insects_data_cond, aes(x=LON, y=LAT), color="black")+
+  geom_polygon(data=INSECTS, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+pinsects_damag<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=insects_data_damag, aes(x=LON, y=LAT), color="black")+
+  geom_polygon(data=INSECTS, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#' ###################################################
+# Case study WEATHER ----
+#'  in Minnesota, Wisconsin, Michigan 
+#' ###################################################
+#'
+WEATHER<-map_data(map="state", region=c("Minnesota", "Wisconsin", "Michigan")) #create a dataframe with states polygons
+#'
+weather_data<-disturbances_plots_coordinates%>% filter(STATECD==c(27, 26, 55)) %>% filter(agent_mortality=="Weather")
+#'
+weather_data_cond<-condition_plots_coordinates%>% filter(STATECD==c(27, 26, 55)) %>% filter(DIST=="Weather")
+#'
+weather_data_damag<-damage_agent_plots_coordinates%>% filter(STATECD==c(27, 26, 55)) %>% filter(DIST_TYPE=="Weather")
+#'
+pweather<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=weather_data, aes(x=LON, y=LAT), color="blue")+
+  geom_polygon(data=WEATHER, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pweather_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=weather_data_cond, aes(x=LON, y=LAT), color="blue")+
+  geom_polygon(data=WEATHER, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+pweather_damag<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=weather_data_damag, aes(x=LON, y=LAT), color="blue")+
+  geom_polygon(data=WEATHER, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'
+#' ###################################################
+# Case study DISEASE ----
+#'  in Minnesota, Wisconsin, Iowa, Illinois, and Missouri
+#' ###################################################
+#' 
+DISEASE<-map_data(map="state", region=c("Minnesota", "Wisconsin", "Iowa", "Illinois", "Missouri")) #create a dataframe with states polygons
+#'
+disease_data<-disturbances_plots_coordinates%>% filter(STATECD==c(27,55,19,17,29)) %>% filter (agent_mortality=="Disease")
+#'
+disease_data_cond<-condition_plots_coordinates %>% filter(STATECD==c(27,55,19,17,29)) %>% filter (DIST=="Disease")
+#'
+disease_data_damag<-damage_agent_plots_coordinates %>% filter(STATECD==c(27,55,19,17,29)) %>% filter (DIST_TYPE=="Disease")
+#'
+#'
+pdisease<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disease_data, aes(x=LON, y=LAT), color="brown")+
+  geom_polygon(data=DISEASE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pdisease_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disease_data_cond, aes(x=LON, y=LAT), color="brown")+
+  geom_polygon(data=DISEASE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+pdisease_damag<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=disease_data_damag, aes(x=LON, y=LAT), color="brown")+
+  geom_polygon(data=DISEASE, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)  
+#'
+#'
+#' #################################################################################################
+#' 
+#' Plot the "other disturbances" ----
+#'
+#'
+other_data_cond<-condition_plots_coordinates %>% filter (DIST=="Other")
+#'
+other_data<-disturbances_plots_coordinates %>% filter (agent_mortality=="Other")
+#'
+other_data_damag<-damage_agent_plots_coordinates %>% filter (DIST_TYPE=="Other")
+#'
+#'
+p_others<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=other_data, aes(x=LON, y=LAT), color="orange" )+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+p_others_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=other_data_cond, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+p_others_damag<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=other_data_damag, aes(x=LON, y=LAT), color="orange")+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+#' Summarize the "other" dataset ag mortality by year
+#' 
+sum_other_data<- other_data %>% group_by (INVYR) %>%
+  summarize(n=n())
+#' 
+#' ####################################
+#' 
+#' Plot everything but "other"
+#' 
+exp_other_data_cond<-condition_plots_coordinates %>% filter (DIST!="Other")
+#'
+exp_other_data<-disturbances_plots_coordinates %>% filter (agent_mortality!="Other")
+#'
+exp_other_data_damag<-damage_agent_plots_coordinates %>% filter (DIST_TYPE!="Other")
+#'
+#'
+p_exp_others<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=exp_other_data, aes(x=LON, y=LAT, color=agent_mortality ))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+p_exp_others_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=exp_other_data_cond, aes(x=LON, y=LAT, color=DIST))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+p_exp_others_damag<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=exp_other_data_damag, aes(x=LON, y=LAT, color=DIST_TYPE))+
+  geom_polygon(data=US, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#' 
+#' ###################################################
+# Case study VEGETATION ----
+#'  in Wisconsin
+#' ###################################################
+#' 
+VEGETATION<-map_data(map="state", region=c("Wisconsin")) #create a dataframe with states polygons
+#'
+vegetation_data<-disturbances_plots_coordinates%>% filter(STATECD==c(55)) %>% filter (agent_mortality=="Vegetation")
+#'
+vegetation_data_cond<-condition_plots_coordinates %>% filter(STATECD==c(55)) %>% filter (DIST=="Vegetation")
+#'
+#'
+#'
+pvegetation<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=vegetation_data, aes(x=LON, y=LAT), color="green4")+
+  geom_polygon(data=VEGETATION, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'   
+pvegetation_cond<-ggplot() +
+  theme_void() +
+  ggspatial::geom_spatial_point(data=vegetation_data_cond, aes(x=LON, y=LAT), color="green4")+
+  geom_polygon(data=VEGETATION, aes(x=long, y=lat, group = group), fill=NA, color="black")+
+  coord_sf(crs=4326)
+#'  
+#' 
+#' 
+#' 
+#' ####################
+#'         
+#'
+#' Spun using:
+#' 
+#'   ezspin("code/Disturbance_variables_test.R", out_dir = "output", keep_md=FALSE) 
+
