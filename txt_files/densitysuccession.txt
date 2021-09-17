@@ -1,0 +1,26 @@
+LandisData  "Density-Succession"											
+	
+Density-Succession		Value
+<<-----------------------------
+										
+Timestep  1 <<5?	
+StartYear	2001															
+<<SeedingAlgorithm	WardSeedDispersal						
+SeedingAlgorithm	DensitySeeding						
+								
+InitialCommunities      initial-communities.txt											
+InitialCommunitiesMap   initialcommunity_test.img	
+
+DensitySpeciesParameters	density_speciesparameters.txt		
+											
+EcoregionParameters		EcoregionParameters_density.txt	
+
+DynamicEcoregionFile 	DynamicEcoregionInput.txt
+
+DynamicInputFile	establishment_probability.txt
+
+DiameterInputFile	Ecoregion_diameter_table.txt
+   								
+DisturbanceReductions	disturbance_reductions.txt
+ 											
+BiomassVariableFile			BioMassCoef.txt
