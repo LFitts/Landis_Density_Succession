@@ -851,6 +851,7 @@ wiTB2<-wiTB
 wiTB2$PLOT$ECO_PROVINCE<-substr(wiTB2$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
 #'
 wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
+wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY) column for later referencing in the loop (each species-ecoregion)
 #'
 #'
 # ----Create the loop for all the species----
@@ -858,19 +859,17 @@ wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grp
 #' Get the species list
 dg.summ$KEY<-paste(dg.summ$ECO_PROVINCE,dg.summ$SPCD, sep="_")
 sp_eco_listWI<-unique(dg.summ$KEY)
-#sp_eco_listWI<-sp_eco_listWI[c(1,6)] #for now to test the loop
+#sp_eco_listWI<-sp_eco_listWI[c(1,6,23,47)] #for now to test the loop
 #'
-wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY) column for later referencing in the loop (each species-ecoregion)
-#'
-temp<-wiTB2$TREE %>% filter(STATUSCD == 1)%>% #merge the tree table with the ecoregion and only keep live trees
-  merge(wi.sp, by='PLT_CN')
-#'
+#' Create a table for maximum diameters per species per ecoregion
+temp<-wiTB2$TREE %>% merge(wi.sp, by='PLT_CN')%>%
+ filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
+#
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
-  summarise(max_dia=max(DIA))%>%
-  mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_")) #create the identifier here as well
+  summarise(max_dia=max(DIA, na.rm=T))%>%
+  mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_"))#%>% na.omit()#%>%#create the identifier here as well
 #'
-#'
-#' Create the empty data frames
+#' Create the empty data frames needed for the loop
 #' 
 age_dia<-data.frame()
 #' 
@@ -878,8 +877,13 @@ library(data.table)
 #' Create the for loop
 #' 
 for(i in 1:length(sp_eco_listWI)){
-
+#"
+tempkey=sp_eco_listWI[i]
+#'
 smallWorkingTB <-dg.summ %>% filter(KEY==sp_eco_listWI[i])
+#' Fill in zeros
+smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,0.05,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+#'
 smallGrowthMD <-tibble(KEY=sp_eco_listWI[i],AGE = 1, DIA = 1.0)
 age <- 1 
 
@@ -901,7 +905,7 @@ age <- max(growthMD$AGE) + 1
 #workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,((shift(workingTB$DIA_GROW, type="lead")+shift(workingTB$DIA_GROW, type="lag"))/2),workingTB$DIA_GROW) #check what to do with diameter growth when negative or zero
 workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,0.05,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
 #'
-while(max(growthMD$DIA) < maxtable$max_dia[i]){
+while(max(growthMD$DIA) < maxtable$max_dia[which(maxtable$KEY==tempkey)]){
   subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
   diaGR <- subTB %>% slice(nrow(subTB))
   growthMD <- bind_rows(growthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
@@ -911,82 +915,78 @@ age_dia<-rbind(age_dia, growthMD)
 
 }
 #' 
-
-
-
-
-
-
+#' Now transform the diameter variable into 
 
 #####################################
+#DELETE ONCE THE LOOP WORKS 
 #Point to directory containing FIA tables
-fiaDir <- 'H:/FIA_Wisconsin/Landis_Density_Succession/data/WI_FIA/'
+#fiaDir <- 'H:/FIA_Wisconsin/Landis_Density_Succession/data/WI_FIA/'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
-wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3) #These are the minimum FIA tables that we need for this exercise
-wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
+#wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3) #These are the minimum FIA tables that we need for this exercise
+#wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
 #'
 #----Estimate diameter growth for trees smaller than 5" DBH----
 #' 
 #' With the tree table:
-wi.st <- wiTB$TREE %>% filter(DIA < 5 & STATUSCD == 1) %>% select(CN, PLT_CN, PREV_TRE_CN, INVYR,CYCLE, PLOT, SUBP, TREE, SPCD, DIA)
+#wi.st <- wiTB$TREE %>% filter(DIA < 5 & STATUSCD == 1) %>% select(CN, PLT_CN, PREV_TRE_CN, INVYR,CYCLE, PLOT, SUBP, TREE, SPCD, DIA)
 #' With the plot table (to get the ecoregions)
-wi.sp <- wiTB$PLOT %>% select(PLT_CN, ECOSUBCD)
-wi.sp$ECO_PROVINCE<- substr(wi.sp$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blanc space at the beginning of the ECOSUBCD column from the FIA database
+#wi.sp <- wiTB$PLOT %>% select(PLT_CN, ECOSUBCD)
+#wi.sp$ECO_PROVINCE<- substr(wi.sp$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blanc space at the beginning of the ECOSUBCD column from the FIA database
 #' 
 #' Now keep only the PLT_CN and the ecological province
 #' 
-wi.sp<-wi.sp %>% select(PLT_CN, ECO_PROVINCE)
+#wi.sp<-wi.sp %>% select(PLT_CN, ECO_PROVINCE)
 #'
 #' Merge with the tree table
 #'
-wi.st<-merge(wi.st, wi.sp, by='PLT_CN')
+#wi.st<-merge(wi.st, wi.sp, by='PLT_CN')
 #'
 #' Now calculate diameter growth between cycles 9 and 8
 #' 
-wi.tg <- wi.st %>% filter(CYCLE == 9) %>% 
-  left_join(wi.st %>% filter(CYCLE == 8) %>% select(CN, PREV_TRE_CN, DIA), by = c('PREV_TRE_CN' = 'CN')) 
+#wi.tg <- wi.st %>% filter(CYCLE == 9) %>% 
+#  left_join(wi.st %>% filter(CYCLE == 8) %>% select(CN, PREV_TRE_CN, DIA), by = c('PREV_TRE_CN' = 'CN')) 
 #'
-wi.tg$DIA_GROW <- wi.tg$DIA.x - wi.tg$DIA.y #remember FIA is in inches
-wi.tg$sizeClass <- makeClasses(wi.tg$DIA.x, interval = 1, numLabs = T) #creates the diameter classes
-dg.summ <- wi.tg %>% group_by(ECO_PROVINCE, SPCD, sizeClass) %>% summarise(DIA_GROW = mean(DIA_GROW, na.rm=T)) #get the mean diameter growth
+#wi.tg$DIA_GROW <- wi.tg$DIA.x - wi.tg$DIA.y #remember FIA is in inches
+#wi.tg$sizeClass <- makeClasses(wi.tg$DIA.x, interval = 1, numLabs = T) #creates the diameter classes
+#dg.summ <- wi.tg %>% group_by(ECO_PROVINCE, SPCD, sizeClass) %>% summarise(DIA_GROW = mean(DIA_GROW, na.rm=T)) #get the mean diameter growth
 #'
 #Example for red maple
-smallWorkingTB <-dg.summ %>% filter(SPCD == 316 & ECO_PROVINCE== "212J")
+#smallWorkingTB <-dg.summ %>% filter(SPCD == 316 & ECO_PROVINCE== "212J")
 
-smallGrowthMD <-tibble(AGE = 1, DIA = 1.0)
-age <- 1
+#smallGrowthMD <-tibble(AGE = 1, DIA = 1.0)
+#age <- 1
 
-while(max(smallGrowthMD$DIA) < 5){
-  subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
-  diaGR <- subTB %>% slice(nrow(subTB))
-  smallGrowthMD <- bind_rows(smallGrowthMD, tibble(AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
-  age <- age + 1
-}
+#while(max(smallGrowthMD$DIA) < 5){
+#  subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
+#  diaGR <- subTB %>% slice(nrow(subTB))
+#  smallGrowthMD <- bind_rows(smallGrowthMD, tibble(AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+#  age <- age + 1
+#}
 
 #----Estimates of diameter growth for large trees----
-wiTB2<-wiTB
-wiTB2$PLOT$ECO_PROVINCE<-substr(wiTB2$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
+#wiTB2<-wiTB
+#wiTB2$PLOT$ECO_PROVINCE<-substr(wiTB2$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
 #'
-wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
+#wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
 #'
 #Example for red maple
-workingTB <- wiVR %>% filter(SPCD == 316 & ECO_PROVINCE== "212J")
+#workingTB <- wiVR %>% filter(SPCD == 316 & ECO_PROVINCE== "212J")
 
-growthMD <- smallGrowthMD
-age <- max(growthMD$AGE) + 1
+#growthMD <- smallGrowthMD
+#age <- max(growthMD$AGE) + 1
 
-while(max(growthMD$DIA) < 29){
-  subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
-  diaGR <- subTB %>% slice(nrow(subTB))
-  growthMD <- bind_rows(growthMD, tibble(AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
-  age <- age + 1
-}
+#while(max(growthMD$DIA) < 29){
+#  subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
+#  diaGR <- subTB %>% slice(nrow(subTB))
+#  growthMD <- bind_rows(growthMD, tibble(AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+#  age <- age + 1
+#}
 
-ggplot(data=growthMD, aes(x=AGE, y=DIA)) +
-  geom_line() +
+#ggplot(data=growthMD, aes(x=AGE, y=DIA)) +
+#  geom_line() +
   #geom_point() +
-  theme_classic()
+#  theme_classic()
 #'
 #'
 #' ###############################
