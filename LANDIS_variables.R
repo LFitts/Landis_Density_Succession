@@ -871,48 +871,67 @@ maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table 
 #'
 #' Create the empty data frames needed for the loop
 #' 
-age_dia<-data.frame()
+#' 
+dia_list <- list()
+
+
 #' 
 library(data.table)
 #' Create the for loop
 #' 
 for(i in 1:length(sp_eco_listWI)){
-#"
-tempkey=sp_eco_listWI[i]
-#'
-smallWorkingTB <-dg.summ %>% filter(KEY==sp_eco_listWI[i])
-#' Fill in zeros
-smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,0.05,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-#'
-smallGrowthMD <-tibble(KEY=sp_eco_listWI[i],AGE = 1, DIA = 1.0)
-age <- 1 
+  #"
+  age_dia<-data.frame()
+  tempkey=sp_eco_listWI[i]
+  #'
+  smallWorkingTB <- dg.summ %>% filter(KEY==sp_eco_listWI[i]) %>% ungroup()
+  fillTB <- tibble(sizeClass = as.double(1:4))
+  smallWorkingTB <- smallWorkingTB %>% full_join(fillTB, by='sizeClass')
+  
+  smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup')
 
-while(max(smallGrowthMD$DIA) < 5){
-  subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
-  diaGR <- subTB %>% slice(nrow(subTB))
-  smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
-  age <- age + 1
-}
-#'
-#' Now for the trees >=5"
-#' 
-workingTB <- wiVR %>% filter(KEY==sp_eco_listWI[i])
-#'
-growthMD <- smallGrowthMD
-age <- max(growthMD$AGE) + 1
-#'
-#' Fill in zeros
-#workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,((shift(workingTB$DIA_GROW, type="lead")+shift(workingTB$DIA_GROW, type="lag"))/2),workingTB$DIA_GROW) #check what to do with diameter growth when negative or zero
-workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,0.05,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-#'
-while(max(growthMD$DIA) < maxtable$max_dia[which(maxtable$KEY==tempkey)]){
-  subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
-  diaGR <- subTB %>% slice(nrow(subTB))
-  growthMD <- bind_rows(growthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
-  age <- age + 1
-}
-age_dia<-rbind(age_dia, growthMD)
+  
+  #' Fill in zeros
+  smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,0.05,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
 
+  #'
+  smallGrowthMD <-tibble(KEY=sp_eco_listWI[i],AGE = 1, DIA = 1.0)
+  age <- 1 
+  
+  while(max(smallGrowthMD$DIA) < 5){
+    subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
+    diaGR <- subTB %>% slice(nrow(subTB))
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+    age <- age + 1
+  }
+  #'
+  #' Now for the trees >=5"
+  #' 
+  workingTB <- wiVR %>% filter(KEY==sp_eco_listWI[i] & !(is.na(DIA_GROW)))
+  #'
+  growthMD <- smallGrowthMD
+  age <- max(growthMD$AGE) + 1
+  #'
+  #' Fill in zeros
+  #workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,((shift(workingTB$DIA_GROW, type="lead")+shift(workingTB$DIA_GROW, type="lag"))/2),workingTB$DIA_GROW) #check what to do with diameter growth when negative or zero
+  workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,0.05,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  #'
+  while(max(growthMD$DIA) < maxtable$max_dia[which(maxtable$KEY==tempkey)]){
+    if (max(growthMD$DIA) < min(workingTB$sizeClass))
+    {
+      diaGR <- subTB %>% slice(1)
+    } else {
+      subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
+      diaGR <- subTB %>% slice(nrow(subTB))
+    }
+
+    growthMD <- bind_rows(growthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    age <- age + 1
+  }
+  age_dia<-rbind(age_dia, growthMD)
+
+  dia_list[[tempkey]] <- age_dia
 }
 #' 
 #' Now transform the diameter variable into 
