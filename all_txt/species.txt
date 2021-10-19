@@ -1,0 +1,40 @@
+LandisData	Species
+
+
+>> Name Longevity Sexual_maturity Shade_tolerance Fire_tolerance SeedDispersal_Effective SeedDispersal_Maximum Vegetative_reprod_prob SproutAge_Min SproutAge_Max Post.fire_regen
+poputrem 90 15 1 2 0 0 0 0 0 none
+acerrubr 200 10 4 1 0 0 0 0 0 none
+acersacc 300 40 5 1 0 0 0 0 0 none
+abiebals 150 25 4 1 0 0 0 0 0 none
+pinuresi 250 25 2 4 0 0 0 0 0 none
+thujocci 400 30 3 1 0 0 0 0 0 none
+betupapy 130 20 2 2 0 0 0 0 0 none
+fraxnigr 150 20 2 1 0 0 0 0 0 none
+querrubr 210 25 3 3 0 0 0 0 0 none
+tiliamer 200 30 4 2 0 0 0 0 0 none
+pinustro 300 30 3 3 0 0 0 0 0 none
+popugran 90 15 1 2 0 0 0 0 0 none
+ulmuamer 300 40 3 1 0 0 0 0 0 none
+pinubank 100 10 1 2 0 0 0 0 0 none
+prunsero 150 30 1 1 0 0 0 0 0 none
+picemari 200 30 3 3 0 0 0 0 0 none
+larilari 180 35 1 1 0 0 0 0 0 none
+querelli 200 35 2 4 0 0 0 0 0 none
+queralba 300 40 3 2 0 0 0 0 0 none
+fraxpenn 200 30 2 2 0 0 0 0 0 none
+ostrvirg 100 25 5 3 0 0 0 0 0 none
+betualle 300 40 4 2 0 0 0 0 0 none
+quervelu 200 20 2 2 0 0 0 0 0 none
+fraxamer 200 30 4 1 0 0 0 0 0 none
+tsugcana 450 30 5 2 0 0 0 0 0 none
+acernegu 60 10 4 1 0 0 0 0 0 none
+piceglau 200 25 3 2 0 0 0 0 0 none
+quermacr 300 35 3 4 0 0 0 0 0 none
+caryovat 250 40 3 4 0 0 0 0 0 none
+carycord 200 30 2 2 0 0 0 0 0 none
+l_tohard 300 40 5 1 0 0 0 0 0 none
+l_toconi 150 25 4 1 0 0 0 0 0 none
+l_inhard 90 15 1 2 0 0 0 0 0 none
+l_inconi 250 25 2 4 0 0 0 0 0 none
+s_tohard 150 30 4 2 0 0 0 0 0 none
+s_inhard 150 30 2 2 0 0 0 0 0 none

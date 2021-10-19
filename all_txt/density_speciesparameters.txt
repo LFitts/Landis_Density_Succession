@@ -1,0 +1,40 @@
+LandisData	DensitySpeciesParameters
+
+
+Name Sp_type BioCoef MaxDia MaxSDI TotalSeed
+abiebals 1 15 9999 655 0
+larilari 1 13 9999 387 0
+piceglau 1 18 9999 412 0
+picemari 1 18 9999 500 0
+pinubank 1 17 9999 356 0
+pinuresi 1 17 9999 505 0
+pinustro 1 17 9999 529 0
+thujocci 1 12 9999 771 0
+tsugcana 1 16 9999 510 0
+acernegu 0 5 9999 344 0
+acerrubr 0 5 9999 421 0
+acersacc 0 8 9999 371 0
+betualle 0 6 9999 369 0
+betupapy 0 6 9999 466 0
+carycord 0 9 9999 301 0
+caryovat 0 9 9999 302 0
+fraxamer 0 7 9999 408 0
+fraxnigr 0 7 9999 423 0
+fraxpenn 0 7 9999 414 0
+ostrvirg 0 7 9999 304 0
+popugran 0 1 9999 520 0
+poputrem 0 1 9999 562 0
+prunsero 0 7 9999 384 0
+queralba 0 11 9999 361 0
+querelli 0 11 9999 336 0
+quermacr 0 11 9999 423 0
+querrubr 0 11 9999 414 0
+quervelu 0 11 9999 370 0
+tiliamer 0 7 9999 526 0
+ulmuamer 0 7 9999 282 0
+L_Tohard 0 8 9999 371 0
+L_Toconi 1 15 9999 655 0
+L_Inhard 0 1 9999 562 0
+L_Inconi 1 17 9999 505 0
+S_Tohard 0 7 9999 257 0
+S_Inhard 0 7 9999 463 0

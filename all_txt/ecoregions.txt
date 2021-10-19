@@ -1,0 +1,16 @@
+LandisData	Ecoregions
+
+
+>> Active Map_code Name Description
+yes 1 212H "Northern Lower Peninsula Section"
+yes 2 212J "Southern Superior Uplands Section"
+yes 3 212K "Western Superior Uplands Section"
+yes 4 212Q "North Central Wisconsin Uplands Section"
+yes 5 212T "Northern Upper Peninsula Section"
+yes 6 212X "Northern Highlands Section"
+yes 7 212Y "Southwest Lake Superior Clay Plain Section"
+yes 8 212Z "Green Bay-Manitowac Upland Section"
+yes 9 222K "Southwestern Great Lakes Morainal Section"
+yes 10 222L "North Central US Driftless and Escarpment Section"
+yes 11 222M "Minnesota and Northeast Iowa Morainal-Oak Savana Section"
+yes 12 222R "Wisconsin Central Sands Section"
