@@ -6,10 +6,23 @@ library(tidyverse)
 #' 
 #' Read in the data for Wisconsin
 #' 
-WI_COND<-read.csv("data/main_WI_2020/WI_COND.csv")#read the condition table
-WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
-WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+#WI_COND<-fread("data/main_WI_2020/WI_COND.csv")#read the condition table
+#WI_PLOT<-fread("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+#WI_TREE<-fread("data/main_WI_2020/WI_TREE.csv")#read the tree table
 
+WI_COND <- wiTB$COND
+WI_PLOT <- wiTB$PLOT
+WI_TREE <- wiTB$TREE
+
+
+plt_list <- read_csv('data/WI_PLOT_LIST.CSV')
+plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))
+
+WI_COND <- WI_COND %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_')) %>% 
+  filter(KEY %in% unique(plt_list$KEY))
+
+WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
+  filter(SUBKEY %in% unique(plt_list$SUBKEY))
 #FIA species name reference table
 #Available https://apps.fs.usda.gov/fia/datamart/CSV/REF_SPECIES.csv 
 ref <- read_csv('data/REF_SPECIES.csv')
@@ -23,12 +36,13 @@ siteSize = 169
 #' Subset for ONE county (COUNTYCD =1) and just keep records from cycle 8
 #' and select variables of interest
 #'
-WI_COND<-subset(WI_COND, COUNTYCD==1) %>% subset(CYCLE == 8) %>%
+WI_COND<- WI_COND %>% subset(CYCLE == 8) %>%
   select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
   mutate(MAPCODE = 1:nrow(.))
 WI_PLOT<-subset(WI_PLOT, CN %in% unique(WI_COND$PLT_CN)) %>%
   select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
   mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''))
+
 WI_TREE<-subset(WI_TREE, PLT_CN %in% unique(WI_COND$PLT_CN)) %>% 
   select(CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
          SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
@@ -37,7 +51,13 @@ WI_TREE<-subset(WI_TREE, PLT_CN %in% unique(WI_COND$PLT_CN)) %>%
          DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG) %>%
   left_join(., ref, by = 'SPCD')
 
-
+WI_TREE<- WI_TREE %>% 
+  select(CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
+         SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
+         DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, 
+         TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, 
+         DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG, SUBKEY) %>%
+  left_join(., ref, by = 'SPCD')
 #'
 #' Function to convert species and diameter to age cohort
 #' 
@@ -53,7 +73,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('data/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
     {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -82,10 +102,16 @@ for (i in 1:nrow(WI_COND))
   if (COND_SUB$COND_STATUS_CD != 1){next}
   PLOT_SUB <- WI_PLOT %>% filter(CN == COND_SUB$PLT_CN)
   if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
-  TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1) %>% 
-    select(PLT_CN, LANDSPEC, SUBP, TPA_UNADJ, DIA) %>% rowwise() %>%
+  TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & LANDSPEC %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+    select(PLT_CN, LANDSPEC, SUBP, TPA_UNADJ, DIA) 
+  if (nrow(TREE_SUB) == 0){next}
+  
+  TREE_SUB <- TREE_SUB %>% rowwise() %>%
     mutate(AGECLASS = ageClass(str_replace(PLOT_SUB$ECOSECCD, ' ', ''), LANDSPEC, (DIA * 2.54)),
            TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
+  
+  TREE_SUB <- TREE_SUB %>% filter(AGECLASS < 1000)
+
   
   TREE_GRP <- TREE_SUB %>% group_by(SUBP, LANDSPEC, AGECLASS) %>%
     summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
