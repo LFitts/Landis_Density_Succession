@@ -417,7 +417,7 @@ close(fileConn)
 #'
 #' Read in the species attributes table
 #'
-species_attributes<-read.csv('LANDIS_work/data/excel_created/species_attributes.CSV')
+species_attributes<-read.csv('data/species_attributes.CSV')
 #'
 #' Create a "name" column with the format Landis uses (4 letters of the genus+4letters of the species)
 species_attributes<-tidyr::separate(species_attributes, Scientific_name, c("genus", "species"), "\\s(?:.+\\s)?") #separate the string for scientific name into character vectors divided by the space
@@ -815,7 +815,9 @@ library(tidyverse)
 #' TEST FOR ALL SPECIES
 #' 
 #Point to directory containing FIA tables
-fiaDir <- 'H:/FIA_Wisconsin/Landis_Density_Succession/data/WI_FIA/'
+fiaDir <- 'D:/fia/rFIA/'
+
+spcds <- c(746, 316, 318, 12, 125, 241, 375, 543, 833, 951, 129, 743, 972, 105, 95, 762, 809, 71, 802, 544, 701, 371, 837, 541, 261, 94, 823, 313, 407, 402)
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
 wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3) #These are the minimum FIA tables that we need for this exercise
@@ -824,7 +826,7 @@ wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
 #----Estimate diameter growth for trees smaller than 5" DBH----
 #' 
 #' With the tree table:
-wi.st <- wiTB$TREE %>% filter(DIA < 5 & STATUSCD == 1) %>% select(CN, PLT_CN, PREV_TRE_CN, INVYR,CYCLE, PLOT, SUBP, TREE, SPCD, DIA)
+wi.st <- wiTB$TREE %>% filter(DIA < 5 & STATUSCD == 1 & SPCD %in% spcds) %>% select(CN, PLT_CN, PREV_TRE_CN, INVYR,CYCLE, PLOT, SUBP, TREE, SPCD, DIA)
 #' With the plot table (to get the ecoregions)
 wi.sp <- wiTB$PLOT %>% select(PLT_CN, ECOSUBCD)
 wi.sp$ECO_PROVINCE<- substr(wi.sp$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blanc space at the beginning of the ECOSUBCD column from the FIA database
@@ -851,6 +853,7 @@ wiTB2<-wiTB
 wiTB2$PLOT$ECO_PROVINCE<-substr(wiTB2$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
 #'
 wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
+wiVR <- wiVR %>% filter(SPCD %in% spcds)
 wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY) column for later referencing in the loop (each species-ecoregion)
 #'
 #'
@@ -866,7 +869,7 @@ temp<-wiTB2$TREE %>% merge(wi.sp, by='PLT_CN')%>%
  filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
 #
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
-  summarise(max_dia=max(DIA, na.rm=T))%>%
+  summarise(max_dia=(max(DIA, na.rm=T) + 2))%>%
   mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_"))#%>% na.omit()#%>%#create the identifier here as well
 #'
 #' Create the empty data frames needed for the loop
@@ -887,13 +890,13 @@ for(i in 1:length(sp_eco_listWI)){
   smallWorkingTB <- dg.summ %>% filter(KEY==sp_eco_listWI[i]) %>% ungroup()
   fillTB <- tibble(sizeClass = as.double(1:4))
   smallWorkingTB <- smallWorkingTB %>% full_join(fillTB, by='sizeClass')
+  smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,NA,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
-  smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup')
+  smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup') %>% 
+    arrange(sizeClass)
 
+  smallWorkingTB$DIA_GROW<-ifelse(is.na(smallWorkingTB$DIA_GROW),0.04,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
-  #' Fill in zeros
-  smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,0.05,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-
   #'
   smallGrowthMD <-tibble(KEY=sp_eco_listWI[i],AGE = 1, DIA = 1.0)
   age <- 1 
@@ -913,12 +916,13 @@ for(i in 1:length(sp_eco_listWI)){
   age <- max(growthMD$AGE) + 1
   #'
   #' Fill in zeros
-  #workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,((shift(workingTB$DIA_GROW, type="lead")+shift(workingTB$DIA_GROW, type="lag"))/2),workingTB$DIA_GROW) #check what to do with diameter growth when negative or zero
-  workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,0.05,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,NA,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  workingTB <- workingTB %>% fill(DIA_GROW, .direction = 'downup')
+  workingTB$DIA_GROW<-ifelse(is.na(workingTB$DIA_GROW),0.04,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
   #'
   while(max(growthMD$DIA) < maxtable$max_dia[which(maxtable$KEY==tempkey)]){
-    if (max(growthMD$DIA) < min(workingTB$sizeClass))
+    if (max(growthMD$DIA) < min(workingTB$sizeClass, na.rm = T))
     {
       diaGR <- subTB %>% slice(1)
     } else {
@@ -931,8 +935,16 @@ for(i in 1:length(sp_eco_listWI)){
   }
   age_dia<-rbind(age_dia, growthMD)
 
-  dia_list[[tempkey]] <- age_dia
+  age_dia <- age_dia %>% 
+    mutate(ECO_PROVINCE = str_split(KEY, '_', simplify=T)[,1],
+           SPCD = as.integer(str_split(KEY, '_', simplify=T)[,2]),
+           DIA = round((DIA * 2.54), digits = 3)) %>% 
+    left_join(species_codes, by='SPCD')
+  
+  dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
+  print(tempkey)
 }
+
 #' 
 #' Now transform the diameter variable into 
 
@@ -1036,8 +1048,17 @@ for(i in 1:length(sp_eco_listWI)){
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
-writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n"), con = "LANDIS_work/all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
-write.table(SP_diameter, "LANDIS_work/all_txt/Ecoregion_diameter_table.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
+writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n"), con = "all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
+
+lapply(1:length(dia_list), function(i) write.table(dia_list[[i]],
+                                                  file = "all_txt/Ecoregion_diameter_table.txt",
+                                                  row.names = F,
+                                                  append = T,
+                                                  quote = F,
+                                                  col.names = F))
+                                                    
+
+#write.table(SP_diameter, "LANDIS_work/all_txt/Ecoregion_diameter_table.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
 #'
 #'
 #' ##################################################################################
