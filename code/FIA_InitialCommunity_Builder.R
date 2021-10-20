@@ -94,7 +94,7 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' 
 MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
-outFile = file('output/Initial_Community.txt', 'w')
+outFile = file('all_txt/Initial_Community.txt', 'w')
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
 for (i in 1:nrow(WI_COND))
 {

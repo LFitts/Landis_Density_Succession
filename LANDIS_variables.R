@@ -869,7 +869,7 @@ temp<-wiTB2$TREE %>% merge(wi.sp, by='PLT_CN')%>%
  filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
 #
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
-  summarise(max_dia=(max(DIA, na.rm=T) + 2))%>%
+  summarise(max_dia=(max(DIA, na.rm=T)))%>%
   mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_"))#%>% na.omit()#%>%#create the identifier here as well
 #'
 #' Create the empty data frames needed for the loop
