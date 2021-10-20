@@ -1179,14 +1179,22 @@ WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
 
 WI_PLOT_COORD<-WI_PLOT_COORD[order(WI_PLOT_COORD$SUBP_ID, decreasing=F),]# reorder the dataframe for reproducibility later on when we create new rasters and want to maintain the same subplot distribution
 #'
-initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6) #create empty ecoregion, initial communities and a subplot id raster to fill up later
+initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up later
 LU1<-LU2<-LU3<-LU4<-LU5<-LU6<-LU7<-LU8<-LU9<-LU10<-LU11<-LU12<-LU13<-LU14<-LU15<-LU16<-LU17<-LU18<-LU19<-LU20<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6) #Create empty land use rasters to be filled later
 res(ecoregion_map) #check resolution ...IS THIS IN METERS?
 ncell(ecoregion_map) #check number of cells
 values(ecoregion_map)<-WI_PLOT_COORD$Map_code_ecoregion #add values to the rasters
 values(initial_communities_map)<-WI_PLOT_COORD$SUBP_ID
 values(subplot_key)<-as.factor(WI_PLOT_COORD$model_run_key)
+
+#' Alternate way of creating initial communities
 #'
+MV_KEY <- MV_KEY %>% 
+  left_join(WI_PLOT %>% select(CN, ECO_PROVINCE) %>% mutate(CN = as.character(CN)), by = c('PLT_CN' = 'CN')) %>% 
+  left_join(eco_codes, by='ECO_PROVINCE')
+
+initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
+ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #' Now stack the different raster layers into one
 #' 
 #s1 <- stack(ecoregion_map, subplot_key) #stack raster
@@ -1194,11 +1202,11 @@ values(subplot_key)<-as.factor(WI_PLOT_COORD$model_run_key)
 #b1 <- brick(r1, r2, r3) #brick raster
 #'
 #' Save the files
-writeRaster(ecoregion_map, "LANDIS_work/data/R_created/ecoregion_test.img", NAflag=-9999)
+writeRaster(ecoregion_map, "all_txt/ecoregion_test.img", NAflag=-9999, overwrite=T)
 writeRaster(ecoregion_map, "LANDIS_work/data/R_created/ecoregion_test.tif", NAflag=-9999)
 plot(ecoregion_map)
 #'
-writeRaster(initial_communities_map, "LANDIS_work/data/R_created/initialcommunity_test.img", NAflag=-9999)
+writeRaster(initial_communities_map, "all_txt/initialcommunity_test.img", NAflag=-9999, overwrite=T)
 writeRaster(initial_communities_map, "LANDIS_work/data/R_created/initialcommunity_test.tif", NAflag=-9999)
 #'
 #' 
