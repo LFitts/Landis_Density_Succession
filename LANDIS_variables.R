@@ -50,22 +50,6 @@ WI_TREE <- select(WI_TREE, TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP,
 WI_SUBPLOT<-select(WI_SUBPLOT, SUBPLOT_CN, PLT_CN, STATECD, COUNTYCD, PLOT, SUBP, INVYR, SUBPCOND, CONDLIST)
 WI_SITETREE<-select(WI_SITETREE, SITETREE_CN, PLT_CN, INVYR, SUBP, STATECD, COUNTYCD, PLOT, CONDID, TREE, SPCD, DIA, HT, AGEDIA, SITREE, SIBASE)
 #' 
-#' #################################################################################
-#  Subset information for one subplot to test the model ----
-#' #################################################################################
-#' 
-#' Check which plot had condition status 1 (forest) + had been affected by an insect disturbance (10)
-#test<-WI_COND%>% filter(COND_STATUS_CD==1, DSTRBCD1==10)    #selected countycd 63, plot 20205, invyr 2001 as it was affected by disease and fire (we want to test the capability of LU+ to insert disturbances)
-#' 
-#'   
-WI_TREE1<-WI_TREE%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205 , SUBP ==1)
-WI_COND1<-WI_COND %>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205)
-WI_PLOT1<-WI_PLOT%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205)
-WI_SUBP_COND1<-WI_SUBP_COND%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205)
-WI_SUBPLOT1<-WI_SUBPLOT%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205, SUBP ==1)
-WI_SITETREE1<-WI_SITETREE%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205 , SUBP ==1)
-#' 
-#'          
 #' ##################################################################################
 # 1. Homogenize time periods: ----
 #'###################################################################################
@@ -92,7 +76,7 @@ WI_SITETREE1<-WI_SITETREE%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205 , SU
 #WI_LOOP_LD<-WI_LOOP_LD[order(WI_LOOP_LD$INVYR),]
 #'Now create a new column KEY holding the contents of the first three columns (STATECD, COUNTYCD and PLOT) so that the loop can look for every combination of state, county and plot and assign an increasing number to each time it finds that combination
 #WI_LOOP_LD$KEY<-paste(WI_LOOP_LD$STATECD, WI_LOOP_LD$COUNTYCD, WI_LOOP_LD$PLOT, sep="_")
-#'As the new column KEY has repeated occurences, let's create a vector: vec that will hold the unique items of KEY (this will be used inside the loop to find unique occurences)
+#'As the new column KEY has repeated occurrences, let's create a vector: vec that will hold the unique items of KEY (this will be used inside the loop to find unique occurences)
 #vec<-unique(WI_LOOP_LD$KEY)
 #'
 #'Create the loop
@@ -100,7 +84,7 @@ WI_SITETREE1<-WI_SITETREE%>%filter(STATECD==55 , COUNTYCD==63 , PLOT==20205 , SU
 #' Create a new column PLOT_NUM: it will hold the RANK of the measurement taken for each (state,county,plot) combination (aka each key)
 #' (i.e., a key that has three measurements will have three occurrences/rows in the database, with column PLOT_NUM holding values 0, 1, and 2 successively)
 #'
-#' Remove comment simbol when running from scratch
+#' Remove comment symbol when running from scratch
 #WI_LOOP_LD$TIME_PER<-0
 #for(i in 1:length(vec)){
 #  tempkey=vec[i]
@@ -121,8 +105,8 @@ WI_LOOP_LD<-read.csv("LANDIS_work/data/R_created/WI_LOOP_TIMEP.CSV")
 #' Set time periods in a wide format
 #' 
 WI_LOOP_LD$TIME_PER=ifelse(WI_LOOP_LD$TIME_PER == 0, "t0",
-                          ifelse(WI_LOOP_LD$TIME_PER == 1, "t1",
-                                 ifelse(WI_LOOP_LD$TIME_PER == 2, "t2","t3")))
+                           ifelse(WI_LOOP_LD$TIME_PER == 1, "t1",
+                                  ifelse(WI_LOOP_LD$TIME_PER == 2, "t2","t3")))
 #'    
 #' 
 time_wide <- WI_LOOP_LD %>%
@@ -145,29 +129,34 @@ time_wide$N_REM<-ifelse(time_wide$t0 != 0 & time_wide$t1 == 0 & time_wide$t2 == 
 #' Read in the plot list that will be used in LANDIS (F and M)
 #' 
 WI_PLOT_LIST<-read.csv("LANDIS_work/data/R_created/WI_PLOT_LIST.CSV")
-LIST_KEY<-as.data.frame(WI_PLOT_LIST[,c(7,9)]) #JUST KEEP THE KEY COLUMN
+LIST_KEY<-as.data.frame(WI_PLOT_LIST[,c(6,7,9)]) #JUST KEEP THE KEY COLUMN
 #'
-#' Merge with the time_wide dataset
+#' Merge with the time_wide data set
 #'
 time_wide<-merge(time_wide, LIST_KEY)
 #'
 n_rem<-time_wide%>% group_by(N_REM)%>%
   summarize(n=n())
 #'
+#' Final list of plots (excluding the ones that only have 1 or 2 measurements)
+#'
+WI_PLOT_LIST<-time_wide%>% filter(N_REM>=3)
+#write.csv(WI_PLOT_LIST,'LANDIS_work/data/R_created/WI_PLOT_LIST_updated.CSV')
+#'
 #' ##################################################################################
-# 2. Looking into the number of conditions in a subplot (just for general information) ----
+# 2. Looking into the number of conditions in a plot/subplot (just for general information) ----
 #'###################################################################################
 #'
 #' Merge the time-period table (WI_LOOP_TIMEPER) with the subplot table
 #' 
 WI_SUBPLOT <- merge(WI_LOOP_LD, WI_SUBPLOT, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
 #'
-#' Recategorize plots into F,NF,M
+#' Recategorize plots into F,NF,M,W,NS
 #' 
-#' Create a new dataset recategorizing the plots with conditions of forest (F), non-forest (NF) and mixed (M)
+#' Create a new data set recategorizing the plots with conditions of forest (F), non-forest (NF), mixed (M), water (W), and non-sampled (NS)
 #' 
 NEW_COND<-WI_COND %>% select (STATECD, COUNTYCD,PLOT, INVYR, COND_STATUS_CD) #select variables of interest
-NEW_COND<-unique(NEW_COND) #create a unique dataset for each combination of state, county, plot, inventory year and condition status
+NEW_COND<-unique(NEW_COND) #create a unique data set for each combination of state, county, plot, inventory year and condition status
 #'
 #' Put conditions in a wide format
 NEW_COND<-NEW_COND%>% pivot_wider(names_from=COND_STATUS_CD, values_from=COND_STATUS_CD)
@@ -194,13 +183,13 @@ NEW_COND$CONDITION=ifelse(NEW_COND$CONDITION1 != 0 & NEW_COND$CONDITION2 == 0 & 
 #' 
 CONDITION_PLOT<-NEW_COND%>% select(STATECD, COUNTYCD, PLOT, INVYR, CONDITION)
 #'
-#' Merge with the WI_LOOP_LD dataaset to obtain the homogenized time periods
+#' Merge with the WI_LOOP_LD data set to obtain the homogenized time periods
 #'
 CONDITION_PLOT <- merge(CONDITION_PLOT, WI_LOOP_LD, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
 #'
 #' Keep subplots for the first remeasurement
 #' 
-WI_PLOT_TIME0<-CONDITION_PLOT%>% filter(TIME_PER==0) #this is going to be the initial pool of plots for time 0
+WI_PLOT_TIME0<-CONDITION_PLOT%>% filter(TIME_PER=="t0") #this is going to be the initial pool of plots for time 0
 #'
 #' Let's see how many are forests vs non-forest at time zero (number of plots and percentage)
 #'
@@ -218,7 +207,7 @@ WI_COND_0<-WI_PLOT_TIME0%>% group_by(CONDITION)%>%
 #'
 #' Keep subplots for the first remeasurement
 #' 
-#WI_SUBP_TIME0<-WI_SUBPLOT%>% filter(TIME_PER==0)
+#WI_SUBP_TIME0<-WI_SUBPLOT%>% filter(TIME_PER=="t0")
 #'
 #' Let's see how many are forests vs non-forest at time zero (number of plots and percentage)
 #'
@@ -229,39 +218,39 @@ WI_COND_0<-WI_PLOT_TIME0%>% group_by(CONDITION)%>%
 #' ########################################################
 #' Separating the list of conditions in each subplot
 #'
-WI_SUBP_TIME0$CONDLIST <-as.character(WI_SUBP_TIME0$CONDLIST)# convert the numeric values to text values
-WI_SUBP_TIME0$COND1<-substr(WI_SUBP_TIME0$CONDLIST,1,1) #create a column that will just keep the 1st character in the string. Will do the same for characters 2,3, and 4, each in one independent column
-WI_SUBP_TIME0$COND2<-substr(WI_SUBP_TIME0$CONDLIST,2,2)
-WI_SUBP_TIME0$COND3<-substr(WI_SUBP_TIME0$CONDLIST,3,3)
-WI_SUBP_TIME0$COND4<-substr(WI_SUBP_TIME0$CONDLIST,4,4)
+#WI_SUBP_TIME0$CONDLIST <-as.character(WI_SUBP_TIME0$CONDLIST)# convert the numeric values to text values
+#WI_SUBP_TIME0$COND1<-substr(WI_SUBP_TIME0$CONDLIST,1,1) #create a column that will just keep the 1st character in the string. Will do the same for characters 2,3, and 4, each in one independent column
+#WI_SUBP_TIME0$COND2<-substr(WI_SUBP_TIME0$CONDLIST,2,2)
+#WI_SUBP_TIME0$COND3<-substr(WI_SUBP_TIME0$CONDLIST,3,3)
+#WI_SUBP_TIME0$COND4<-substr(WI_SUBP_TIME0$CONDLIST,4,4)
 #'
-WI_SUBP_TIME0$CONDITION_TYPE<-ifelse(WI_SUBP_TIME0$COND1 != 0 & WI_SUBP_TIME0$COND2 == 0 & WI_SUBP_TIME0$COND3 ==0 & WI_SUBP_TIME0$COND4 == 0, "ONE",
-                                  ifelse(WI_SUBP_TIME0$COND2 != 0 & WI_SUBP_TIME0$COND3 ==0 & WI_SUBP_TIME0$COND4 == 0, "TWO",
-                                         ifelse(WI_SUBP_TIME0$COND3 !=0 & WI_SUBP_TIME0$COND4 == 0, "THREE",
-                                                ifelse(WI_SUBP_TIME0$COND4 != 0, "FOUR", "NA"))))
+#WI_SUBP_TIME0$CONDITION_TYPE<-ifelse(WI_SUBP_TIME0$COND1 != 0 & WI_SUBP_TIME0$COND2 == 0 & WI_SUBP_TIME0$COND3 ==0 & WI_SUBP_TIME0$COND4 == 0, "ONE",
+#                                  ifelse(WI_SUBP_TIME0$COND2 != 0 & WI_SUBP_TIME0$COND3 ==0 & WI_SUBP_TIME0$COND4 == 0, "TWO",
+#                                         ifelse(WI_SUBP_TIME0$COND3 !=0 & WI_SUBP_TIME0$COND4 == 0, "THREE",
+#                                                ifelse(WI_SUBP_TIME0$COND4 != 0, "FOUR", "NA"))))
 #'
 #' 
 #' Now estimate the proportion of plots with a one, two, three, and four conditions
 #' 
-COND_SUMMARY<- WI_SUBP_TIME0%>% group_by (CONDITION_TYPE) %>%
-  summarize(n=n(),
-            percentage=(n()*100)/length(WI_SUBP_TIME0$SUBP))
+#COND_SUMMARY<- WI_SUBP_TIME0%>% group_by (CONDITION_TYPE) %>%
+#  summarize(n=n(),
+#            percentage=(n()*100)/length(WI_SUBP_TIME0$SUBP))
 #'
 #'
 #' Now check the dominance of a single condition on a plot
 #' 
-DOM<-WI_SUBP_COND %>% group_by(STATECD, COUNTYCD, PLOT, SUBP, INVYR) %>% 
-  summarize(n=n())
+#DOM<-WI_SUBP_COND %>% group_by(STATECD, COUNTYCD, PLOT, SUBP, INVYR) %>% 
+#  summarize(n=n())
 #'
 # This confirms that the subplot condition table contains all the conditions present in the subplot
 #'
 #' Now let's reclassify the proportions into intervals (0-0.25; 0.25-0.50; 0.50-0.75; 0.75-1)
 #'
-WI_SUBP_COND$PROP_CLASS<- ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0 & WI_SUBP_COND$SUBPCOND_PROP <0.25, "[0-0.25>",
-                                 ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0.25 & WI_SUBP_COND$SUBPCOND_PROP <0.5, "[0.25-0.5>",
-                                        ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0.5 & WI_SUBP_COND$SUBPCOND_PROP <0.75, "[0.5-0.75>",
-                                               ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0.75 & WI_SUBP_COND$SUBPCOND_PROP <= 1, "[0.75-1>",
-                                                      "NA"))))
+#WI_SUBP_COND$PROP_CLASS<- ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0 & WI_SUBP_COND$SUBPCOND_PROP <0.25, "[0-0.25>",
+#                                 ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0.25 & WI_SUBP_COND$SUBPCOND_PROP <0.5, "[0.25-0.5>",
+#                                        ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0.5 & WI_SUBP_COND$SUBPCOND_PROP <0.75, "[0.5-0.75>",
+#                                               ifelse(WI_SUBP_COND$SUBPCOND_PROP>=0.75 & WI_SUBP_COND$SUBPCOND_PROP <= 1, "[0.75-1>",
+#                                                     "NA"))))
 #'
 #'Now let's see which condition proportion is greater in each 
 #' 
@@ -293,35 +282,35 @@ WI_PLOT_FM_TIME0<-WI_PLOT_TIME0%>% filter(CONDITION=="F" | CONDITION =="M")
 WI_PLOT_LIST<-read.csv("LANDIS_work/data/R_created/WI_PLOT_LIST.CSV")
 WI_PLOT_LIST<-WI_PLOT_LIST[,-1] #Remove the auto-created extra column (x)
 #'
-#' Separate the list of plots into different columns
+#' Separate the list of plots into different columns so we have different subplots list for different uses
 WI_PLOT_LIST$subplot_list <-as.character(WI_PLOT_LIST$subplot_list)# convert the numeric values to text values
-WI_PLOT_LIST$model_run<-substr(WI_PLOT_LIST$subplot_list,1,1) #create a column that will just keep the 1st character in the string. Will do the same for characters 2,3, and 4, each in one independent column
-WI_PLOT_LIST$calibration<-substr(WI_PLOT_LIST$subplot_list,2,2)
-WI_PLOT_LIST$validation<-substr(WI_PLOT_LIST$subplot_list,3,3)
-WI_PLOT_LIST$extra<-substr(WI_PLOT_LIST$subplot_list,4,4)
+WI_PLOT_LIST$s1<-substr(WI_PLOT_LIST$subplot_list,1,1) #create a column that will just keep the 1st character in the string. Will do the same for characters 2,3, and 4, each in one independent column
+WI_PLOT_LIST$s2<-substr(WI_PLOT_LIST$subplot_list,2,2)
+WI_PLOT_LIST$s3<-substr(WI_PLOT_LIST$subplot_list,3,3)
+WI_PLOT_LIST$s4<-substr(WI_PLOT_LIST$subplot_list,4,4)
 #'
 #' Now create a key for each and a new dataframe containing that information
 #' 
-WI_PLOT_LIST$model_run_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$model_run, sep="_")
+WI_PLOT_LIST$s1_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$s1, sep="_")
 #'
-WI_PLOT_LIST$calibration_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$calibration, sep="_")
+WI_PLOT_LIST$s2_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$s2, sep="_")
 #'
-WI_PLOT_LIST$validation_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$validation, sep="_")
+WI_PLOT_LIST$s3_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$s3, sep="_")
 #'
-WI_PLOT_LIST$extra_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$extra, sep="_")
+WI_PLOT_LIST$s4_key<-paste(WI_PLOT_LIST$STATECD, WI_PLOT_LIST$COUNTYCD, WI_PLOT_LIST$PLOT, WI_PLOT_LIST$s4, sep="_")
 #'
 #' Get independent data frames that will be merged with the tree table to have the data base for each purpose
-model_run<-as.data.frame(WI_PLOT_LIST$model_run_key)
-names(model_run)= "KEY"
+s1<-as.data.frame(WI_PLOT_LIST$s1_key)
+names(s1)= "KEY"
 #'
-calibration<-as.data.frame(WI_PLOT_LIST$calibration_key)
-names(calibration)= "KEY"
+s2<-as.data.frame(WI_PLOT_LIST$s2_key)
+names(s2)= "KEY"
 #'
-validation<-as.data.frame(WI_PLOT_LIST$validation_key)
-names(validation)= "KEY"
+s3<-as.data.frame(WI_PLOT_LIST$s3_key)
+names(s3)= "KEY"
 #'
-extra<-as.data.frame(WI_PLOT_LIST$extra_key)
-names(extra)= "KEY"
+s4<-as.data.frame(WI_PLOT_LIST$s4_key)
+names(s4)= "KEY"
 #'
 #' Prepare the key column in the tree table
 #' 
@@ -330,34 +319,34 @@ WI_TREE2$KEY<- paste(WI_TREE2$STATECD, WI_TREE2$COUNTYCD, WI_TREE2$PLOT, WI_TREE
 #'
 #' Now merge with the tree table
 #'
-model_run<-merge(model_run, WI_TREE2, by="KEY")
+s1_run<-merge(s1, WI_TREE2, by="KEY")
 #'
-calibration<-merge(calibration, WI_TREE2, by="KEY")
+s2_run<-merge(s2, WI_TREE2, by="KEY")
 #'
-validation<-merge(validation, WI_TREE2, by="KEY")
+s3_run<-merge(s3, WI_TREE2, by="KEY")
 #'
-extra<-merge(extra, WI_TREE2, by="KEY")
+s4_run<-merge(s4, WI_TREE2, by="KEY")
 #'
 #' Save the CSV files
 #' 
-#write.csv(model_run,'LANDIS_work/data/R_created/model_runDB.CSV') #next time we run this code we won't create the loop again, just read the csv created
-#write.csv(calibration,'LANDIS_work/data/R_created/calibrationDB.CSV') #next time we run this code we won't create the loop again, just read the csv created
-#write.csv(validation,'LANDIS_work/data/R_created/validationDB.CSV') #next time we run this code we won't create the loop again, just read the csv created
-#write.csv(extra,'LANDIS_work/data/R_created/extraDB.CSV') #next time we run this code we won't create the loop again, just read the csv created
+#write.csv(s1_run,'LANDIS_work/data/R_created/s1_run.CSV') #next time we run this code we won't create the loop again, just read the csv created
+#write.csv(s2_run,'LANDIS_work/data/R_created/s2_run.CSV') #next time we run this code we won't create the loop again, just read the csv created
+#write.csv(s3_run,'LANDIS_work/data/R_created/s3_run.CSV') #next time we run this code we won't create the loop again, just read the csv created
+#write.csv(s4_run,'LANDIS_work/data/R_created/s4_run.CSV') #next time we run this code we won't create the loop again, just read the csv created
 #'
 #' Read in the files just created
 #'
-model_run<-read.csv("LANDIS_work/data/R_created/model_runDB.CSV")
-model_run<-model_run[,-1] #Remove the auto-created extra column (x) 
+s1_run<-read.csv("LANDIS_work/data/R_created/s1_run.CSV")
+s1_run<-s1_run[,-1] #Remove the auto-created extra column (x) 
 #'
-calibration<-read.csv("LANDIS_work/data/R_created/calibrationDB.CSV")
-calibration<-calibration[,-1] #Remove the auto-created extra column (x)
+s2_run<-read.csv("LANDIS_work/data/R_created/s2_run.CSV")
+s2_run<-s2_run[,-1] #Remove the auto-created extra column (x)
 #'
-validation<-read.csv("LANDIS_work/data/R_created/validationDB.CSV")
-validation<-validation[,-1] #Remove the auto-created extra column (x)
+s3_run<-read.csv("LANDIS_work/data/R_created/s3_run.CSV")
+s3_run<-s3_run[,-1] #Remove the auto-created extra column (x)
 #'
-extra<-read.csv("LANDIS_work/data/R_created/extraDB.CSV")
-extra<-extra[,-1] #Remove the auto-created extra column (x)
+s4_run<-read.csv("LANDIS_work/data/R_created/s4_run.CSV")
+s4_run<-s4_run[,-1] #Remove the auto-created extra column (x)
 #'
 #' ##################################################################################
 # 4. Create the Scenario file (ready)----
@@ -399,12 +388,7 @@ writeLines(c(paste("LandisData", "Scenario", sep="\t"),
              "\n",
              paste(">> Output Extensions", "Initialization File", sep="\t"),
              paste(">> --------------------", "-------------------", sep="\t"),
-             paste(">>  \"Output Max Species Age\"", "max-spp-age.output.txt", sep="\t"),
-             paste(">>  \"Output Biomass Reclass\"",	"BiomReclass.txt", sep="\t"),
-             paste(">>  \"Output Biomass\"", "output_Biomass.txt", sep="\t"),
              paste(" \"Density Output\"", "output_Density.txt", sep="\t"),
-             paste(">>  \"Output Cohort Statistics\"", "cohort-stats.output.txt", sep="\t"),
-             paste(">>  \"Output Biomass\"", "output_Biomass.txt", sep="\t"),
              "\n",
              "RandomNumberSeed  4357"),fileConn)
 close(fileConn)   
@@ -417,7 +401,7 @@ close(fileConn)
 #'
 #' Read in the species attributes table
 #'
-species_attributes<-read.csv('data/species_attributes.CSV')
+species_attributes<-read.csv('LANDIS_work/data/excel_created/species_attributes.CSV')
 #'
 #' Create a "name" column with the format Landis uses (4 letters of the genus+4letters of the species)
 species_attributes<-tidyr::separate(species_attributes, Scientific_name, c("genus", "species"), "\\s(?:.+\\s)?") #separate the string for scientific name into character vectors divided by the space
@@ -463,19 +447,13 @@ names(species_attributes)[1]<-">> Name"
 writeLines(c(paste("LandisData", "Species", sep="\t"),"\n"), con = "LANDIS_work/all_txt/species.txt") #creates the independent lines of text
 write.table(species_attributes, "LANDIS_work/all_txt/species.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
 #' 
-#' 
-#species_codes$temp<-ifelse(species_codes$name == "Allsp", 1,
-#                           ifelse(species_codes$name == "Alltole",2,
-#                                  ifelse(species_codes$name == "Allinto", 3, 0))) #NOT SURE WHY I DID THIS
-#' 
-#'
 #' ##################################################################################
 # 6. Create table: ecoregion (ready) ---- 
 #'###################################################################################
 #' 
 #' Obtain the ecological provinces from the plot table
 #' 
-#' Create a table listing all the ecological provinces in WI and their description:
+#' Create a table listing all the ecological sections in WI and their description:
 #' 
 province<-read.csv('LANDIS_work/data/excel_created/ecological_provinces.CSV') #read in the list of ecological provinces from the FIA list and their descriptions from https://www.fs.fed.us/research/publications/misc/73326-wo-gtr-76d-cleland2007.pdf
 #'
@@ -592,13 +570,51 @@ write.table(WI_ECO, "LANDIS_work/all_txt/ecoregions.txt", row.names=F, append=TR
 # 7. Create table: establishment probability (ready) ----
 #'################################################################################### 
 #'
+#' This portion of the code will create a txt for a combination of all the years vs ecoregions
+#' 
 #' For this table, we need to grab information from the previous tables and use the function union to show all the combinations of them
 #' 
 #' Let's start with the years 1:20 and the ecoregions
 #' 
 #' Year
 #' 
-year<- seq(1,20,1)
+#year<- seq(1,20,1)
+#' 
+#' Ecoregion
+#' 
+#ecoregion<- WI_ECO$Name
+#' 
+#' Species
+#' 
+#species<-species_attributes$`>> Name`
+#'
+#' 
+#' Use the expand.grid function to create a dataframe with all the different combinations of the 3 columns:
+#' 
+#establishment_probability=expand.grid(x = year, y = ecoregion, z=species)
+#'
+#' Now add the establishment probability column
+#establishment_probability$ProbEst<-0
+#' 
+#' Modify the names of the df
+#' 
+#names(establishment_probability)<-c(">> Year", "Landtype", "Species", "ProbEst")
+#'
+#' Now write the establishment_probability text file:
+#' 
+#writeLines(c(paste("LandisData", "Dynamic Input Data", sep="\t"),"\n"), con = "LANDIS_work/all_txt/establishment_probability.txt") #creates the independent lines of text
+#write.table(establishment_probability, "LANDIS_work/all_txt/establishment_probability.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
+#'  
+#'  #######################################################
+#' This section of the code will only create establishment probability for year 1 since LANDIS will take those values for the rest of the years
+#' 
+#' For this table, we need to grab information from the previous tables and use the function union to show all the combinations of them
+#' 
+#' Let's start with the years 1:20 and the ecoregions
+#' 
+#' Year
+#' 
+year<- 1
 #' 
 #' Ecoregion
 #' 
@@ -624,6 +640,7 @@ names(establishment_probability)<-c(">> Year", "Landtype", "Species", "ProbEst")
 #' 
 writeLines(c(paste("LandisData", "Dynamic Input Data", sep="\t"),"\n"), con = "LANDIS_work/all_txt/establishment_probability.txt") #creates the independent lines of text
 write.table(establishment_probability, "LANDIS_work/all_txt/establishment_probability.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
+#' 
 #' 
 #' ##################################################################################
 # 8. Create table: Density succession (ready) ----
@@ -664,15 +681,180 @@ close(fileConn)
 # 9. Create table: Initial communities ----
 #'###################################################################################
 #' 
+#' # 1. Read in the FIA data for the state of Wisconsin
+#' 
+#' Read in the data for Wisconsin
+#' 
+#WI_COND<-fread("data/main_WI_2020/WI_COND.csv")#read the condition table
+#WI_PLOT<-fread("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+#WI_TREE<-fread("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_COND <- wiTB$COND
+WI_PLOT <- wiTB$PLOT
+WI_TREE <- wiTB$TREE
+#' 
+#' Recode species
+#' Vectors containing generic categories
+vec99991<-c(531,462)
+vec99992<-c(202,57)
+vec99993<-c(901,373,552)
+vec99994<-c(68)
+vec99995<-c(763,319,682,921,923,920,681,501,357)
+vec99996<-c(500,356,761,660,922,766,502,760,934)
+#' 
+#' Rename the species codes
+WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
+                     ifelse(WI_TREE$SPCD ==975|WI_TREE$SPCD ==317|WI_TREE$SPCD ==977|WI_TREE$SPCD ==974,972,
+                            ifelse(WI_TREE$SPCD ==602|WI_TREE$SPCD ==601|WI_TREE$SPCD ==600,402,
+                                   ifelse(WI_TREE$SPCD ==741|WI_TREE$SPCD ==742|WI_TREE$SPCD ==752,746,
+                                          ifelse(WI_TREE$SPCD ==130|WI_TREE$SPCD ==136,125,
+                                                 ifelse(WI_TREE$SPCD ==804,802,
+                                                        ifelse(WI_TREE$SPCD ==91|WI_TREE$SPCD ==96,94,
+                                                               ifelse(WI_TREE$SPCD ==314|WI_TREE$SPCD ==320,318,
+                                                                      ifelse(WI_TREE$SPCD ==826,823,
+                                                                             ifelse(WI_TREE$SPCD ==70,71,
+                                                                                    ifelse(WI_TREE$SPCD ==546,544,
+                                                                                           ifelse(WI_TREE$SPCD ==10|WI_TREE$SPCD ==15,12,
+                                                                                                  ifelse(WI_TREE$SPCD == 830,809,
+                                                                                                         ifelse(WI_TREE$SPCD %in% vec99991,99991,
+                                                                                                                ifelse(WI_TREE$SPCD %in% vec99992,99992,
+                                                                                                                       ifelse(WI_TREE$SPCD %in% vec99993,99993,
+                                                                                                                              ifelse(WI_TREE$SPCD %in% vec99994,99994,
+                                                                                                                                     ifelse(WI_TREE$SPCD %in% vec99995,99995,
+                                                                                                                                            ifelse(WI_TREE$SPCD %in% vec99996,99996,WI_TREE$SPCD)))))))))))))))))))
+
 #' 
 #' 
+#
+plt_list <- read_csv('LANDIS_work/data/R_created/WI_PLOT_LIST_updated.CSV')
+plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))%>%
+  mutate(tKEY = str_c(KEY, t0, sep='_'))%>%
+  mutate(tsubKEY = str_c(tKEY, str_sub(subplot_list, 1, 1), sep='_'))
+
+WI_COND <- WI_COND %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_')) %>%
+  mutate(tKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, sep='_')) %>%
+  filter(KEY %in% unique(plt_list$KEY))
+#filter(tKEY %in% unique(plt_list$tKEY))
+
+WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
+  mutate(tsubKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_'))
+filter(SUBKEY %in% unique(plt_list$SUBKEY))#%>%
+#filter(tsubKEY %in% unique(plt_list$tsubKEY))
+#FIA species name reference table
+#Available https://apps.fs.usda.gov/fia/datamart/CSV/REF_SPECIES.csv 
+#ref <- read_csv('data/REF_SPECIES.csv')
+#ref <- ref %>% mutate(LANDSPEC = paste0(tolower(str_sub(GENUS,1,4)), str_sub(SPECIES,1,4))) %>%
+#  select(SPCD, LANDSPEC)
+ref<-species_codes
+#Area of site (raster cell size squared in meters)
+siteSize = 169
+#'
+#'
+#' Subset for ONE county (COUNTYCD =1) and just keep records from cycle 8
+#' and select variables of interest
+#'
+WI_COND<- WI_COND %>% subset(CYCLE == 8) %>% #WHY CYCLE 8????
+  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
+  mutate(MAPCODE = 1:nrow(.))
+WI_PLOT<-subset(WI_PLOT, CN %in% unique(WI_COND$PLT_CN)) %>%
+  select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
+  mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''))
+
+WI_TREE<-subset(WI_TREE, PLT_CN %in% unique(WI_COND$PLT_CN)) %>% 
+  select(CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
+         SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
+         DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, 
+         TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, 
+         DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG) %>%
+  left_join(., ref, by = 'SPCD')
+
+WI_TREE<- WI_TREE %>% ##########????????????
+  select(CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
+         SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
+         DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, 
+         TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, 
+         DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG, SUBKEY) %>%
+  left_join(., ref, by = 'SPCD')
+#'
+#' Function to convert species and diameter to age cohort
 #' 
+ageClass <- function(ecoregion, spcd, diameter)
+{
+  if (is.na(diameter))
+  {
+    return(NA)
+  }
+  if (!((spcd %in% landGrow$SPECIES) & (ecoregion %in% landGrow$ECOREGION)))
+  {
+    return(NA)
+  }
+  if (!exists('landGrow'))
+  {
+    landGrow <- read.table('LANDIS_work/all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+  }
+  if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
+  {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  if (diameter >= max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
+  {return(max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  minAgeClass <- abs(diameter - landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'DIAMETER']) 
+  maxAgeClass <- abs(diameter - landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'DIAMETER'])
+  if (minAgeClass <= maxAgeClass) 
+  {return(landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'AGE'])}
+  else 
+  {return(landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'AGE'])}
+}
+
+#'
+#' Loop through conditions and subplots
+#' Assign each tree in a subplot to an age cohort
+#' Write age cohort and number of trees out to LANDIS initial community file
 #' 
+MV_KEY <- data.frame()
+PLOTMAPVALUE <- 1
+outFile = file('LANDIS_work/all_txt/Initial_Community.txt', 'w')
+cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
+for (i in 1:nrow(WI_COND))
+{
+  COND_SUB <- WI_COND[i,]
+  if (COND_SUB$COND_STATUS_CD != 1){next}
+  PLOT_SUB <- WI_PLOT %>% filter(CN == COND_SUB$PLT_CN)
+  if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
+  TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & Name %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+    select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA) 
+  if (nrow(TREE_SUB) == 0){next}
+  
+  TREE_SUB <- TREE_SUB %>% rowwise() %>%
+    mutate(AGECLASS = ageClass(str_replace(PLOT_SUB$ECOSECCD, ' ', ''), Name, (DIA * 2.54)),
+           TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
+  
+  TREE_SUB <- TREE_SUB %>% filter(AGECLASS < 1000)
+  
+  
+  TREE_GRP <- TREE_SUB %>% group_by(SUBP, Name, AGECLASS) %>%
+    summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
+    mutate(ICSTRING = paste0(' ', AGECLASS, ' (', TREESUM, ')'))
+  
+  for (j in unique(TREE_GRP$SUBP))
+  {
+    TREE_OUT <- TREE_GRP %>% filter(SUBP == j) %>% group_by(Name) %>%
+      summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
+    
+    cat(paste('MapCode', PLOTMAPVALUE), file=outFile, sep='\n')
+    cat(TREE_OUT$ICSTRING, file=outFile, sep='\n')
+    cat('\n', file=outFile)
+    
+    out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_CN = as.character(COND_SUB$PLT_CN), SUBP = j)
+    MV_KEY <- rbind(MV_KEY, out_row)
+    PLOTMAPVALUE <- PLOTMAPVALUE + 1
+  }
+  
+}
+close(outFile)
+write_csv(MV_KEY, 'output/MAPVALUE_KEY.csv')
 #' 
-#' Now write the establishment_probability text file:
+#' Now write the Initial communities text file:
 #' 
-writeLines(c(paste("LandisData", "\"Initial Communities\"", sep="\t"),"\n"), con = "LANDIS_work/all_txt/initial-communities.txt") #creates the independent lines of text
-write.table(establishment_probability, "LANDIS_work/all_txt/establishment_probability.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
+#writeLines(c(paste("LandisData", "\"Initial Communities\"", sep="\t"),"\n"), con = "LANDIS_work/all_txt/initial-communities.txt") #creates the independent lines of text
+#write.table(establishment_probability, "LANDIS_work/all_txt/establishment_probability.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
 #' 
 #' 
 #' ##################################################################################
@@ -722,7 +904,7 @@ writeLines(c(paste("LandisData", "BiomassCoefficients", sep="\t"),
 close(fileConn)   
 #' 
 #' ##################################################################################
-# 12. Create table: Density species parameters (in progress)----
+# 12. Create table: Density species parameters (ready)----
 #'###################################################################################
 #'
 #' Read in the REF_SPECIES table
@@ -750,27 +932,51 @@ biomass_coef$genus<-tolower(biomass_coef$genus)
 biomass_coef$BioCoef<-ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2094 & biomass_coef$JENKINS_TOTAL_B2==2.3867 & grepl("aspen",biomass_coef$Common_name),1,
                              ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2094 & biomass_coef$JENKINS_TOTAL_B2==2.3867 & grepl("alder",biomass_coef$Common_name),2,
                                     ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2094 & biomass_coef$JENKINS_TOTAL_B2==2.3867 & grepl("cottonwood",biomass_coef$Common_name),3,
-                                            ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2094 & biomass_coef$JENKINS_TOTAL_B2==2.3867 & grepl("willow",biomass_coef$Common_name),4,
-                                                   ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.9123 & biomass_coef$JENKINS_TOTAL_B2==2.3651 & grepl("maple",biomass_coef$Common_name),5,
-                                                          ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.9123 & biomass_coef$JENKINS_TOTAL_B2==2.3651 & grepl("boxelder",biomass_coef$Common_name),5,
-                                                          ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.9123 & biomass_coef$JENKINS_TOTAL_B2==2.3651 & grepl("birch",biomass_coef$Common_name),6,
-                                                                 ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.4800 & biomass_coef$JENKINS_TOTAL_B2==2.4835,7,
-                                                                        ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("maple",biomass_coef$Common_name),8,
-                                                                               ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("hickory",biomass_coef$Common_name),9,
-                                                                                      ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("beech",biomass_coef$Common_name),10,
-                                                                                             ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("oak",biomass_coef$Common_name),11,
-                                                                                                    ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0336 & biomass_coef$JENKINS_TOTAL_B2==2.2592 & grepl("cedar",biomass_coef$Common_name),12,
-                                                                                                           ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0336 & biomass_coef$JENKINS_TOTAL_B2==2.2592 & grepl("larch",biomass_coef$Common_name),13,
-                                                                                                                  ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0336 & biomass_coef$JENKINS_TOTAL_B2==2.2592 & grepl("tamarack",biomass_coef$Common_name),13,
-                                                                                                                  ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2304 & biomass_coef$JENKINS_TOTAL_B2==2.4435,14,
-                                                                                                                         ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.5384 & biomass_coef$JENKINS_TOTAL_B2==2.4814 & grepl("fir",biomass_coef$Common_name),15,
-                                                                                                                                ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.5384 & biomass_coef$JENKINS_TOTAL_B2==2.4814 & grepl("hemlock",biomass_coef$Common_name),16,
-                                                                                                                                       ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.5356 & biomass_coef$JENKINS_TOTAL_B2==2.4349,17,
-                                                                                                                                              ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0773 & biomass_coef$JENKINS_TOTAL_B2==2.3323,18,
-                                                                                                                                                     ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.0000 & biomass_coef$JENKINS_TOTAL_B2==1.0000,19,0)))))))))))))))))))))
+                                           ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2094 & biomass_coef$JENKINS_TOTAL_B2==2.3867 & grepl("willow",biomass_coef$Common_name),4,
+                                                  ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.9123 & biomass_coef$JENKINS_TOTAL_B2==2.3651 & grepl("maple",biomass_coef$Common_name),5,
+                                                         ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.9123 & biomass_coef$JENKINS_TOTAL_B2==2.3651 & grepl("boxelder",biomass_coef$Common_name),5,
+                                                                ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.9123 & biomass_coef$JENKINS_TOTAL_B2==2.3651 & grepl("birch",biomass_coef$Common_name),6,
+                                                                       ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.4800 & biomass_coef$JENKINS_TOTAL_B2==2.4835,7,
+                                                                              ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("maple",biomass_coef$Common_name),8,
+                                                                                     ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("hickory",biomass_coef$Common_name),9,
+                                                                                            ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("beech",biomass_coef$Common_name),10,
+                                                                                                   ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0127 & biomass_coef$JENKINS_TOTAL_B2==2.4342 & grepl("oak",biomass_coef$Common_name),11,
+                                                                                                          ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0336 & biomass_coef$JENKINS_TOTAL_B2==2.2592 & grepl("cedar",biomass_coef$Common_name),12,
+                                                                                                                 ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0336 & biomass_coef$JENKINS_TOTAL_B2==2.2592 & grepl("larch",biomass_coef$Common_name),13,
+                                                                                                                        ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0336 & biomass_coef$JENKINS_TOTAL_B2==2.2592 & grepl("tamarack",biomass_coef$Common_name),13,
+                                                                                                                               ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.2304 & biomass_coef$JENKINS_TOTAL_B2==2.4435,14,
+                                                                                                                                      ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.5384 & biomass_coef$JENKINS_TOTAL_B2==2.4814 & grepl("fir",biomass_coef$Common_name),15,
+                                                                                                                                             ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.5384 & biomass_coef$JENKINS_TOTAL_B2==2.4814 & grepl("hemlock",biomass_coef$Common_name),16,
+                                                                                                                                                    ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.5356 & biomass_coef$JENKINS_TOTAL_B2==2.4349,17,
+                                                                                                                                                           ifelse(biomass_coef$JENKINS_TOTAL_B1==-2.0773 & biomass_coef$JENKINS_TOTAL_B2==2.3323,18,
+                                                                                                                                                                  ifelse(biomass_coef$JENKINS_TOTAL_B1==-1.0000 & biomass_coef$JENKINS_TOTAL_B2==1.0000,19,0)))))))))))))))))))))
+#' For the generic categories, replace the biomass coefficient class to the correct one
 #' 
-
+biomass_coef$BioCoef<-ifelse(biomass_coef$Name == "L_Tohard",8,
+                             ifelse(biomass_coef$Name=="L_Toconi",15,
+                                    ifelse(biomass_coef$Name=="L_Inhard",1,
+                                           ifelse(biomass_coef$Name=="L_Inconi",17,
+                                                  ifelse(biomass_coef$Name=="S_Tohard"|biomass_coef$Name=="S_Inhard",7,biomass_coef$BioCoef)))))
+#' 
+#' Create column max diameter (for this research, the maximum diameter won't be taken into account in LANDIS since we are giving it the age-diameter curves. The maxdia parameter is only used if the model needs to use its default growth curves)
+#' Therefore, we will assign a high value of 9999 only as a placeholder
+#'   
+biomass_coef$MaxDia <-9999
 #'
+#' Create column total seed (for this research, since we won't have species seed in, the value is zero)
+biomass_coef$TotalSeed <-0
+#'   
+#' Now prepare the text file 
+#' Select variables of interest
+#' 
+biomass_coef<-biomass_coef %>% select (Name, Sp_type, BioCoef, MaxDia, MaxSDI, TotalSeed )
+#'
+names(species_attributes)[1]<-">> Name" #add the comment symbol for LANDIS
+#'
+#' Write the species file
+writeLines(c(paste("LandisData", "DensitySpeciesParameters", sep="\t"),"\n"), con = "LANDIS_work/all_txt/density_speciesparameters.txt") #creates the independent lines of text
+write.table(biomass_coef, "LANDIS_work/all_txt/density_speciesparameters.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
+#' 
 #'
 #' ##################################################################################
 # 13. Create table: Dynamic ecoregion input ----
@@ -811,17 +1017,17 @@ write.table(ecoreg_parameters, "LANDIS_work/all_txt/EcoregionParameters_density.
 #install.packages("rFIA")
 library(rFIA)
 library(tidyverse)
-#####################################
-#' TEST FOR ALL SPECIES
-#' 
+#'###############################################################
 #Point to directory containing FIA tables
-fiaDir <- 'D:/fia/rFIA/'
-
-spcds <- c(746, 316, 318, 12, 125, 241, 375, 543, 833, 951, 129, 743, 972, 105, 95, 762, 809, 71, 802, 544, 701, 371, 837, 541, 261, 94, 823, 313, 407, 402)
+fiaDir <- 'H:/FIA_Wisconsin/Landis_Density_Succession/data/WI_FIA/'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
-wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3) #These are the minimum FIA tables that we need for this exercise
-wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
+wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3)%>% clipFIA() #These are the minimum FIA tables that we need for this exercise
+#wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
+wiTB2<-wiTB
+#'
+#' Species codes for the 30 most abundant WI species (same as the ones used inn the species attributes table)
+spcds <- c(746, 316, 318, 12, 125, 241, 375, 543, 833, 951, 129, 743, 972, 105, 95, 762, 809, 71, 802, 544, 701, 371, 837, 541, 261, 94, 823, 313, 407, 402)
 #'
 #----Estimate diameter growth for trees smaller than 5" DBH----
 #' 
@@ -862,22 +1068,20 @@ wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY
 #' Get the species list
 dg.summ$KEY<-paste(dg.summ$ECO_PROVINCE,dg.summ$SPCD, sep="_")
 sp_eco_listWI<-unique(dg.summ$KEY)
-#sp_eco_listWI<-sp_eco_listWI[c(1,6,23,47)] #for now to test the loop
-#'
 #' Create a table for maximum diameters per species per ecoregion
 temp<-wiTB2$TREE %>% merge(wi.sp, by='PLT_CN')%>%
- filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
+  filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
 #
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
-  summarise(max_dia=(max(DIA, na.rm=T)))%>%
+  summarise(max_dia=max(DIA, na.rm=T))%>%
   mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_"))#%>% na.omit()#%>%#create the identifier here as well
 #'
 #' Create the empty data frames needed for the loop
 #' 
 #' 
 dia_list <- list()
-
-
+dia <- data.frame()
+#'
 #' 
 library(data.table)
 #' Create the for loop
@@ -894,7 +1098,7 @@ for(i in 1:length(sp_eco_listWI)){
   
   smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup') %>% 
     arrange(sizeClass)
-
+  
   smallWorkingTB$DIA_GROW<-ifelse(is.na(smallWorkingTB$DIA_GROW),0.04,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
   #'
@@ -929,12 +1133,12 @@ for(i in 1:length(sp_eco_listWI)){
       subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
       diaGR <- subTB %>% slice(nrow(subTB))
     }
-
+    
     growthMD <- bind_rows(growthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
     age <- age + 1
   }
   age_dia<-rbind(age_dia, growthMD)
-
+  
   age_dia <- age_dia %>% 
     mutate(ECO_PROVINCE = str_split(KEY, '_', simplify=T)[,1],
            SPCD = as.integer(str_split(KEY, '_', simplify=T)[,2]),
@@ -943,122 +1147,23 @@ for(i in 1:length(sp_eco_listWI)){
   
   dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
   print(tempkey)
+  #'
+  dia<-rbind(dia, age_dia)
 }
+#'
+#' add to dia the values for the generic categories?
 
-#' 
-#' Now transform the diameter variable into 
-
-#####################################
-#DELETE ONCE THE LOOP WORKS 
-#Point to directory containing FIA tables
-#fiaDir <- 'H:/FIA_Wisconsin/Landis_Density_Succession/data/WI_FIA/'
-#getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
-#'
-#wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3) #These are the minimum FIA tables that we need for this exercise
-#wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
-#'
-#----Estimate diameter growth for trees smaller than 5" DBH----
-#' 
-#' With the tree table:
-#wi.st <- wiTB$TREE %>% filter(DIA < 5 & STATUSCD == 1) %>% select(CN, PLT_CN, PREV_TRE_CN, INVYR,CYCLE, PLOT, SUBP, TREE, SPCD, DIA)
-#' With the plot table (to get the ecoregions)
-#wi.sp <- wiTB$PLOT %>% select(PLT_CN, ECOSUBCD)
-#wi.sp$ECO_PROVINCE<- substr(wi.sp$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blanc space at the beginning of the ECOSUBCD column from the FIA database
-#' 
-#' Now keep only the PLT_CN and the ecological province
-#' 
-#wi.sp<-wi.sp %>% select(PLT_CN, ECO_PROVINCE)
-#'
-#' Merge with the tree table
-#'
-#wi.st<-merge(wi.st, wi.sp, by='PLT_CN')
-#'
-#' Now calculate diameter growth between cycles 9 and 8
-#' 
-#wi.tg <- wi.st %>% filter(CYCLE == 9) %>% 
-#  left_join(wi.st %>% filter(CYCLE == 8) %>% select(CN, PREV_TRE_CN, DIA), by = c('PREV_TRE_CN' = 'CN')) 
-#'
-#wi.tg$DIA_GROW <- wi.tg$DIA.x - wi.tg$DIA.y #remember FIA is in inches
-#wi.tg$sizeClass <- makeClasses(wi.tg$DIA.x, interval = 1, numLabs = T) #creates the diameter classes
-#dg.summ <- wi.tg %>% group_by(ECO_PROVINCE, SPCD, sizeClass) %>% summarise(DIA_GROW = mean(DIA_GROW, na.rm=T)) #get the mean diameter growth
-#'
-#Example for red maple
-#smallWorkingTB <-dg.summ %>% filter(SPCD == 316 & ECO_PROVINCE== "212J")
-
-#smallGrowthMD <-tibble(AGE = 1, DIA = 1.0)
-#age <- 1
-
-#while(max(smallGrowthMD$DIA) < 5){
-#  subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
-#  diaGR <- subTB %>% slice(nrow(subTB))
-#  smallGrowthMD <- bind_rows(smallGrowthMD, tibble(AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
-#  age <- age + 1
-#}
-
-#----Estimates of diameter growth for large trees----
-#wiTB2<-wiTB
-#wiTB2$PLOT$ECO_PROVINCE<-substr(wiTB2$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
-#'
-#wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
-#'
-#Example for red maple
-#workingTB <- wiVR %>% filter(SPCD == 316 & ECO_PROVINCE== "212J")
-
-#growthMD <- smallGrowthMD
-#age <- max(growthMD$AGE) + 1
-
-#while(max(growthMD$DIA) < 29){
-#  subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
-#  diaGR <- subTB %>% slice(nrow(subTB))
-#  growthMD <- bind_rows(growthMD, tibble(AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
-#  age <- age + 1
-#}
-
-#ggplot(data=growthMD, aes(x=AGE, y=DIA)) +
-#  geom_line() +
-  #geom_point() +
-#  theme_classic()
-#'
-#'
-#' ###############################
-# Work with the site tree table: (not for this exercise but keep the code) ----
-#' 
-#SP<-merge(WI_PLOT, WI_SITETREE, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"))
-#'
-#' Now merge with our species codes:
-#SP<-merge(SP, species_codes, by="SPCD")
-#' 
-#'Obtain the ecological provinces from the ECOSUBCD
-#SP$ECO_PROVINCE<-substr(SP$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blanc space at the beginning of the ECOSUBCD column from the FIA database
-#' 
-#' Now group by ecological province, species, and diameter. We want a diameter-age curve per sp and ecoregion
-#SP_test<-SP%>% group_by(ECO_PROVINCE, Name, DIA)%>%
-#  summarise(Age=mean(AGEDIA),
-#            n=n())
-#'
-#' Round the age into whole numbers
-#' 
-#SP_test$Age<-round(SP_test$Age, digits=0)
-#'
-#' Now organize the columns in the order needed and rename the headers
-#'
-#SP_diameter<-SP_test %>% select (ECO_PROVINCE,Name, Age, DIA)
-#'
-#names(SP_diameter)<-c(">> Ecoregion", "Species", "Age", "Diameter")
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
-writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n"), con = "all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
-
+writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = "LANDIS_work/all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
 lapply(1:length(dia_list), function(i) write.table(dia_list[[i]],
-                                                  file = "all_txt/Ecoregion_diameter_table.txt",
-                                                  row.names = F,
-                                                  append = T,
-                                                  quote = F,
-                                                  col.names = F))
-                                                    
+                                                   file = "LANDIS_work/all_txt/Ecoregion_diameter_table.txt",
+                                                   row.names = F,
+                                                   append = T,
+                                                   quote = F,
+                                                   col.names = F))
 
-#write.table(SP_diameter, "LANDIS_work/all_txt/Ecoregion_diameter_table.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
 #'
 #'
 #' ##################################################################################
@@ -1118,8 +1223,8 @@ tree<-merge(WI_LOOP_LD, tree, by=c("STATECD", "COUNTYCD", "PLOT", "INVYR"), all.
 #' Rename the values in the time period column
 #' 
 tree$TIME_PER=ifelse(tree$TIME_PER == 0, "t0",
-                   ifelse(tree$TIME_PER == 1, "t1",
-                          ifelse(tree$TIME_PER == 2, "t2","t3")))
+                     ifelse(tree$TIME_PER == 1, "t1",
+                            ifelse(tree$TIME_PER == 2, "t2","t3")))
 #'
 #' Now put the table into a wide format
 #' 
@@ -1179,22 +1284,14 @@ WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
 
 WI_PLOT_COORD<-WI_PLOT_COORD[order(WI_PLOT_COORD$SUBP_ID, decreasing=F),]# reorder the dataframe for reproducibility later on when we create new rasters and want to maintain the same subplot distribution
 #'
-initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up later
+initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6) #create empty ecoregion, initial communities and a subplot id raster to fill up later
 LU1<-LU2<-LU3<-LU4<-LU5<-LU6<-LU7<-LU8<-LU9<-LU10<-LU11<-LU12<-LU13<-LU14<-LU15<-LU16<-LU17<-LU18<-LU19<-LU20<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6) #Create empty land use rasters to be filled later
 res(ecoregion_map) #check resolution ...IS THIS IN METERS?
 ncell(ecoregion_map) #check number of cells
 values(ecoregion_map)<-WI_PLOT_COORD$Map_code_ecoregion #add values to the rasters
 values(initial_communities_map)<-WI_PLOT_COORD$SUBP_ID
 values(subplot_key)<-as.factor(WI_PLOT_COORD$model_run_key)
-
-#' Alternate way of creating initial communities
 #'
-MV_KEY <- MV_KEY %>% 
-  left_join(WI_PLOT %>% select(CN, ECO_PROVINCE) %>% mutate(CN = as.character(CN)), by = c('PLT_CN' = 'CN')) %>% 
-  left_join(eco_codes, by='ECO_PROVINCE')
-
-initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
-ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #' Now stack the different raster layers into one
 #' 
 #s1 <- stack(ecoregion_map, subplot_key) #stack raster
@@ -1202,11 +1299,11 @@ ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #b1 <- brick(r1, r2, r3) #brick raster
 #'
 #' Save the files
-writeRaster(ecoregion_map, "all_txt/ecoregion_test.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+writeRaster(ecoregion_map, "LANDIS_work/data/R_created/ecoregion_test.img", NAflag=-9999)
 writeRaster(ecoregion_map, "LANDIS_work/data/R_created/ecoregion_test.tif", NAflag=-9999)
 plot(ecoregion_map)
 #'
-writeRaster(initial_communities_map, "all_txt/initialcommunity_test.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+writeRaster(initial_communities_map, "LANDIS_work/data/R_created/initialcommunity_test.img", NAflag=-9999)
 writeRaster(initial_communities_map, "LANDIS_work/data/R_created/initialcommunity_test.tif", NAflag=-9999)
 #'
 #' 
