@@ -2,6 +2,7 @@ LandisData	Ecoregions
 
 
 >> Active Map_code Name Description
+no	0	empty	"empty"
 yes 1 212H "Northern Lower Peninsula Section"
 yes 2 212J "Southern Superior Uplands Section"
 yes 3 212K "Western Superior Uplands Section"

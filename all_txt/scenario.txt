@@ -28,7 +28,7 @@ CellLength	12.97
 
 >> Output Extensions	Initialization File
 >> --------------------	-------------------
- "Density Output"	output_Density.txt
+ "Output Density"	output_Density.txt
 
 
 RandomNumberSeed  4357

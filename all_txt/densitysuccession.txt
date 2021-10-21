@@ -1,4 +1,4 @@
-LandisData	Density-Succession
+LandisData	"Density-Succession"
 
 
 Density-Succession	Value
@@ -26,7 +26,7 @@ DynamicEcoregionFile	DynamicEcoregionInput.txt
 DynamicInputFile	establishment_probability.txt
 
 
-DynamicInputFile	Ecoregion_diameter_table.txt
+DiameterInputFile	Ecoregion_diameter_table.txt
 
 
 >> DisturbanceReductions	disturbance_reductions.txt
