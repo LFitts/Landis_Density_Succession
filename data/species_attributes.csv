@@ -1,37 +1,37 @@
 SPCD,Common_name,Scientific_name,Longevity,Sexual_maturity,Shade_tolerance,Fire_tolerance,SeedDispersal_Effective,SeedDispersal_Maximum,Vegetative_reprod_prob,SproutAge_Min,SproutAge_Max,Post-fire_regen
-746,quaking aspen,Populus tremuloides,90,15,1,2,500,5000,1,20,90,resprout
-316,red maple,Acer rubrum,200,10,4,1,100,200,0.75,20,150,none
-318,sugar maple,Acer saccharum,300,40,5,1,100,200,0.1,20,60,none
-12,balsam fir,Abies balsamea,150,25,4,1,30,160,0,0,0,none
-125,red pine,Pinus resinosa,250,25,2,4,12,275,0,0,0,none
-241,northern white-cedar,Thuja occidentalis,400,30,3,1,45,60,0,0,0,none
-375,paper birch,Betula papyrifera,130,20,2,2,200,5000,0.8,20,100,none
-543,black ash,Fraxinus nigra,150,20,2,1,100,200,0.5,20,140,none
-833,northern red oak,Quercus rubra,210,25,3,3,30,100,0.7,20,200,none
-951,American basswood,Tilia americana,200,30,4,2,30,120,0.1,20,60,resprout
-129,eastern white pine,Pinus strobus,300,30,3,3,30,120,0,0,0,none
-743,bigtooth aspen,Populus grandidentata,90,15,1,2,500,5000,1,20,90,resprout
-972,American elm,Ulmus americana,300,40,3,1,30,400,0.4,20,60,resprout
-105,jack pine,Pinus banksiana,100,10,1,2,30,100,0,0,0,serotiny
-762,black cherry,Prunus serotina,150,30,1,1,30,200,0.75,20,50,resprout
-95,black spruce,Picea mariana,200,30,3,3,80,200,0,0,0,none
-71,tamarack (native),Larix laricina,180,35,1,1,50,200,0,0,0,none
-809,northern pin oak,Quercus ellipsoidalis,200,35,2,4,30,100,0.7,20,200,none
-802,white oak,Quercus alba,300,40,3,2,30,100,0.5,20,250,none
-544,green ash,Fraxinus pennsylvanica,200,30,2,2,70,140,0.8,20,100,resprout
-701,eastern hophornbeam,Ostrya virginiana,100,25,5,3,,100,0,0,9999,resprout
-371,yellow birch,Betula alleghaniensis,300,40,4,2,100,400,0.1,20,100,none
+746,quaking aspen,Populus tremuloides,200,20,1,2,500,5000,0.9,0,70,resprout
+316,red maple,Acer rubrum,200,15,3,1,100,200,0.75,0,80,resprout
+318,sugar maple,Acer saccharum,400,60,5,1,50,330,0.6,0,25,none
+12,balsam fir,Abies balsamea,150,30,5,1,60,160,0,0,0,none
+125,red pine,Pinus resinosa,300,55,2,4,12,300,0,0,0,none
+241,northern white-cedar,Thuja occidentalis,400,30,4,1,45,60,0.6,50,300,none
+375,paper birch,Betula papyrifera,140,40,2,2,60,5000,0.75,0,100,resprout
+543,black ash,Fraxinus nigra,200,40,4,2,100,2000,0.75,0,25,resprout
+833,northern red oak,Quercus rubra,400,50,2,2,3,5000,0.6,0,80,none
+951,American basswood,Tilia americana,200,15,4,2,20,80,0.75,0,100,resprout
+129,eastern white pine,Pinus strobus,450,22,3,3,60,210,0,0,0,none
+743,bigtooth aspen,Populus grandidentata,100,30,1,2,500,5000,0.9,0,70,resprout
+972,American elm,Ulmus americana,300,40,3,1,91,402,0.75,0,25,resprout
+105,jack pine,Pinus banksiana,150,25,1,3,16,32,0,0,0,serotiny
+762,black cherry,Prunus serotina,250,15,3,1,5,3000,0.75,0,100,resprout
+95,black spruce,Picea mariana,250,18,3,1,79,158,0,0,0,none
+71,tamarack (native),Larix laricina,180,45,1,1,46,200,0,0,0,none
+809,northern pin oak,Quercus ellipsoidalis,200,20,2,3,30,1000,0.75,0,100,resprout
+802,white oak,Quercus alba,600,50,3,4,3,5000,0.6,0,50,resprout
+544,green ash,Fraxinus pennsylvanica,175,30,3,2,5,100,0.75,0,50,resprout
+701,eastern hophornbeam,Ostrya virginiana,150,25,4,3,50,1000,0.6,0,100,resprout
+371,yellow birch,Betula alleghaniensis,300,40,3,2,45,400,0.75,0,25,none
 837,black oak,Quercus velutina,200,20,2,2,30,100,0.4,20,200,resprout
-541,white ash,Fraxinus americana,200,30,4,1,70,140,0.1,20,70,none
+541,white ash,Fraxinus americana,300,37,4,2,70,140,0.75,0,25,resprout
 261,eastern hemlock,Tsuga canadensis,450,30,5,2,30,100,0,0,0,none
-313,boxelder,Acer negundo,60,10,4,1,,200,0.7,20,200,resprout
-94,white spruce,Picea glauca,200,25,3,2,30,200,0,0,0,none
-823,bur oak,Quercus macrocarpa,300,35,3,4,30,100,0.6,20,300,resprout
-407,shagbark hickory,Carya ovata,250,40,3,4,,50,0.8,0,20,resprout
+313,boxelder,Acer negundo,100,11,3,1,100,200,0.7,0,75,resprout
+94,white spruce,Picea glauca,350,20,4,2,27,300,0,0,0,none
+823,bur oak,Quercus macrocarpa,400,75,2,5,18,150,0.6,0,50,resprout
+407,shagbark hickory,Carya ovata,300,40,3,2,30,120,0.9,0,250,resprout
 402,bitternut hickory,Carya cordiformis,200,30,2,2,30,1000,0.7,20,180,none
-99991,L-T-H,L_Tolerant hardwood,300,40,5,1,0,0,0,0,0,none
+99991,L-T-H,L_Tolerant hardwood,400,60,5,1,50,330,0.6,0,25,none
 99992,L-T-C,L_Tolerant conifer,150,25,4,1,0,0,0,0,0,none
-99993,L-I-H,L_Intolerant hardwood,90,15,1,2,0,0,0,0,0,none
-99994,L-I-C,L_Intolerant conifer,250,25,2,4,0,0,0,0,0,none
+99993,L-I-H,L_Intolerant hardwood,200,20,1,2,500,5000,0.9,0,70,none
+99994,L-I-C,L_Intolerant conifer,300,55,2,4,12,300,0,0,0,none
 99995,S-T-H,S_Tolerant hardwood,150,30,4,2,0,0,0,0,0,none
 99996,S-I-H,S_Intolerant hardwood,150,30,2,2,0,0,0,0,0,none
