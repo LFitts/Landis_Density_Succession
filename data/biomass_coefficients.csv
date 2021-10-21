@@ -1,0 +1,37 @@
+SPCD,Common_name,Scientific_name,Name,Sp_type,MaxSDI
+746,quaking aspen,Populus tremuloides,poputrem,0,562
+316,red maple,Acer rubrum,acerrubr,0,421
+318,sugar maple,Acer saccharum,acersacc,0,371
+12,balsam fir,Abies balsamea,abiebals,1,655
+125,red pine,Pinus resinosa,pinuresi,1,505
+241,northern white-cedar,Thuja occidentalis,thujocci,1,771
+375,paper birch,Betula papyrifera,betupapy,0,466
+543,black ash,Fraxinus nigra,fraxnigr,0,423
+833,northern red oak,Quercus rubra,querrubr,0,414
+951,American basswood,Tilia americana,tiliamer,0,526
+129,eastern white pine,Pinus strobus,pinustro,1,529
+743,bigtooth aspen,Populus grandidentata,popugran,0,520
+972,American elm,Ulmus americana,ulmuamer,0,282
+105,jack pine,Pinus banksiana,pinubank,1,356
+762,black cherry,Prunus serotina,prunsero,0,384
+95,black spruce,Picea mariana,picemari,1,500
+71,tamarack (native),Larix laricina,larilari,1,387
+809,northern pin oak,Quercus ellipsoidalis,querelli,0,336
+802,white oak,Quercus alba,queralba,0,361
+544,green ash,Fraxinus pennsylvanica,fraxpenn,0,414
+701,eastern hophornbeam,Ostrya virginiana,ostrvirg,0,304
+371,yellow birch,Betula alleghaniensis,betualle,0,369
+837,black oak,Quercus velutina,quervelu,0,370
+541,white ash,Fraxinus americana,fraxamer,0,408
+261,eastern hemlock,Tsuga canadensis,tsugcana,1,510
+313,boxelder,Acer negundo,acernegu,0,344
+94,white spruce,Picea glauca,piceglau,1,412
+823,bur oak,Quercus macrocarpa,quermacr,0,423
+407,shagbark hickory,Carya ovata,caryovat,0,302
+402,bitternut hickory,Carya cordiformis,carycord,0,301
+99991,L-T-H,L_Tolerant hardwood,L_Tohard,0,371
+99992,L-T-C,L_Tolerant conifer,L_Toconi,1,655
+99993,L-I-H,L_Intolerant hardwood,L_Inhard,0,562
+99994,L-I-C,L_Intolerant conifer,L_Inconi,1,505
+99995,S-T-H,S_Tolerant hardwood,S_Tohard,0,257
+99996,S-I-H,S_Intolerant hardwood,S_Inhard,0,463
