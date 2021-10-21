@@ -1202,11 +1202,11 @@ ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #b1 <- brick(r1, r2, r3) #brick raster
 #'
 #' Save the files
-writeRaster(ecoregion_map, "all_txt/ecoregion_test.img", NAflag=-9999, overwrite=T)
+writeRaster(ecoregion_map, "all_txt/ecoregion_test.img", NAflag=-9999, overwrite=T, datatype='INT2S')
 writeRaster(ecoregion_map, "LANDIS_work/data/R_created/ecoregion_test.tif", NAflag=-9999)
 plot(ecoregion_map)
 #'
-writeRaster(initial_communities_map, "all_txt/initialcommunity_test.img", NAflag=-9999, overwrite=T)
+writeRaster(initial_communities_map, "all_txt/initialcommunity_test.img", NAflag=-9999, overwrite=T, datatype='INT2S')
 writeRaster(initial_communities_map, "LANDIS_work/data/R_created/initialcommunity_test.tif", NAflag=-9999)
 #'
 #' 
