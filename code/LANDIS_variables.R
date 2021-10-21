@@ -15,12 +15,12 @@ library(ezknitr)
 #' 
 #' Read in the data for Wisconsin
 #' 
-WI_COND<-read.csv("LANDIS_work/data/main/WI_COND.csv", na.strings = "NA")#read the condition table
-WI_PLOT<-read.csv("LANDIS_work/data/main/WI_PLOT.csv", na.strings = "NA")#read the plot table
-WI_TREE<-read.csv("LANDIS_work/data/main/WI_TREE.csv", na.strings = "NA")#read the tree table
-WI_SUBPLOT<-read.csv("LANDIS_work/data/main/WI_SUBPLOT.csv", na.strings = "NA")
-WI_SUBP_COND<-read.csv("LANDIS_work/data/main/WI_SUBP_COND.csv", na.strings = "NA")
-WI_SITETREE<-read.csv("LANDIS_work/data/main/WI_SITETREE.csv", na.strings = "NA")
+WI_COND<-fread("data/main_WI_2020/WI_COND.csv", na.strings = "NA")#read the condition table
+WI_PLOT<-fread("data/main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
+WI_TREE<-fread("data/main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
+WI_SUBPLOT<-fread("data/main_WI_2020/WI_SUBPLOT.csv", na.strings = "NA")
+WI_SUBP_COND<-fread("data/main_WI_2020/WI_SUBP_COND.csv", na.strings = "NA")
+WI_SITETREE<-fread("data/main_WI_2020/WI_SITETREE.csv", na.strings = "NA")
 #'
 #'
 #' Just keep records from 2000 on. This is when the annual inventory for WI started
@@ -687,10 +687,19 @@ close(fileConn)
 #' 
 #WI_COND<-fread("data/main_WI_2020/WI_COND.csv")#read the condition table
 #WI_PLOT<-fread("data/main_WI_2020/WI_PLOT.csv")#read the plot table
-#WI_TREE<-fread("data/main_WI_2020/WI_TREE.csv")#read the tree table
-WI_COND <- wiTB$COND
-WI_PLOT <- wiTB$PLOT
-WI_TREE <- wiTB$TREE
+#fiaDir <- 'D:/fia/rFIA'
+#getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
+#'
+#wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("TREE"), inMemory = T, nCores = 3)
+#WI_TREE <- wiTB$TREE %>% filter(INVYR >= 2000)
+WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+
+
+#WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
+#WI_TREE <- WI_TREE %>% mutate(CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
+#WI_PLOT <- WI_PLOT %>% mutate(CN = as.character(CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
+
+
 #' 
 #' Recode species
 #' Vectors containing generic categories
@@ -725,20 +734,18 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 #' 
 #' 
 #
-plt_list <- read_csv('LANDIS_work/data/R_created/WI_PLOT_LIST_updated.CSV')
-plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))%>%
-  mutate(tKEY = str_c(KEY, t0, sep='_'))%>%
-  mutate(tsubKEY = str_c(tKEY, str_sub(subplot_list, 1, 1), sep='_'))
+plt_list <- read_csv('data/WI_PLOT_LIST_updated.CSV')
+plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
 
-WI_COND <- WI_COND %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_')) %>%
-  mutate(tKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, sep='_')) %>%
-  filter(KEY %in% unique(plt_list$KEY))
+#WI_COND <- WI_COND %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_')) %>%
+#  mutate(tKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, sep='_')) %>%
+#  filter(KEY %in% unique(plt_list$KEY))
 #filter(tKEY %in% unique(plt_list$tKEY))
 
-WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
-  mutate(tsubKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_'))
-filter(SUBKEY %in% unique(plt_list$SUBKEY))#%>%
-#filter(tsubKEY %in% unique(plt_list$tsubKEY))
+WI_TREE_SUB <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_')) %>% 
+  filter(SUBKEY %in% unique(plt_list$SUBKEY))
+
+
 #FIA species name reference table
 #Available https://apps.fs.usda.gov/fia/datamart/CSV/REF_SPECIES.csv 
 #ref <- read_csv('data/REF_SPECIES.csv')
@@ -752,22 +759,15 @@ siteSize = 169
 #' Subset for ONE county (COUNTYCD =1) and just keep records from cycle 8
 #' and select variables of interest
 #'
-WI_COND<- WI_COND %>% subset(CYCLE == 8) %>% #WHY CYCLE 8????
-  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
-  mutate(MAPCODE = 1:nrow(.))
-WI_PLOT<-subset(WI_PLOT, CN %in% unique(WI_COND$PLT_CN)) %>%
-  select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
-  mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''))
+#WI_COND<- WI_COND %>% subset(CYCLE == 8) %>% #WHY CYCLE 8????
+#  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
+#  mutate(MAPCODE = 1:nrow(.))
+#WI_PLOT<-subset(WI_PLOT, CN %in% unique(WI_COND$PLT_CN)) %>%
+#  select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
+#  mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''))
 
-WI_TREE<-subset(WI_TREE, PLT_CN %in% unique(WI_COND$PLT_CN)) %>% 
-  select(CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
-         SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
-         DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, 
-         TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, 
-         DRYBIO_WDLD_SPP, DRYBIO_BG, DRYBIO_AG, CARBON_AG, CARBON_BG) %>%
-  left_join(., ref, by = 'SPCD')
 
-WI_TREE<- WI_TREE %>% ##########????????????
+WI_TREE<- WI_TREE %>% 
   select(CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
          SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
          DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, 
@@ -812,14 +812,18 @@ MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
 outFile = file('LANDIS_work/all_txt/Initial_Community.txt', 'w')
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
-for (i in 1:nrow(WI_COND))
+for (i in 1:nrow(plt_list))
 {
-  COND_SUB <- WI_COND[i,]
-  if (COND_SUB$COND_STATUS_CD != 1){next}
-  PLOT_SUB <- WI_PLOT %>% filter(CN == COND_SUB$PLT_CN)
-  if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
-  TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & Name %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
-    select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA) 
+  #COND_SUB <- WI_COND[i,]
+  #if (COND_SUB$COND_STATUS_CD != 1){next}
+  #PLOT_SUB <- WI_PLOT %>% filter(CN == COND_SUB$PLT_CN)
+  #if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
+  #TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & Name %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+  #  select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
+  TREE_SUB <- WI_TREE %>% filter(SUBKEY == plt_list[i, 'SUBKEY'])
+  if (nrow(TREE_SUB) == 0){next}
+  TREE_SUB <- TREE_SUB %>% filter(STATUSCD == 1 & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+    select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
   if (nrow(TREE_SUB) == 0){next}
   
   TREE_SUB <- TREE_SUB %>% rowwise() %>%
@@ -1019,12 +1023,13 @@ library(rFIA)
 library(tidyverse)
 #'###############################################################
 #Point to directory containing FIA tables
-fiaDir <- 'H:/FIA_Wisconsin/Landis_Density_Succession/data/WI_FIA/'
+fiaDir <- 'D:/fia/rFIA/'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
 wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3)%>% clipFIA() #These are the minimum FIA tables that we need for this exercise
 #wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
 wiTB2<-wiTB
+
 #'
 #' Species codes for the 30 most abundant WI species (same as the ones used inn the species attributes table)
 spcds <- c(746, 316, 318, 12, 125, 241, 375, 543, 833, 951, 129, 743, 972, 105, 95, 762, 809, 71, 802, 544, 701, 371, 837, 541, 261, 94, 823, 313, 407, 402)
@@ -1054,13 +1059,16 @@ wi.tg$DIA_GROW <- wi.tg$DIA.x - wi.tg$DIA.y #remember FIA is in inches
 wi.tg$sizeClass <- makeClasses(wi.tg$DIA.x, interval = 1, numLabs = T) #creates the diameter classes
 dg.summ <- wi.tg %>% group_by(ECO_PROVINCE, SPCD, sizeClass) %>% summarise(DIA_GROW = mean(DIA_GROW, na.rm=T))%>% na.omit() #get the mean diameter growth and omit the na values (rows with no data for diameter growth)
 #'
+#'State-wide growth rates
+stVR <- vitalRates(wiTB, bySpecies = T, bySizeClass = T, treeType = 'live')
+
 #----Estimates of diameter growth for large trees----
-wiTB2<-wiTB
-wiTB2$PLOT$ECO_PROVINCE<-substr(wiTB2$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
+wiTB$PLOT$ECO_PROVINCE<-substr(wiTB$PLOT$ECOSUBCD, start=2, stop=5) #Create the ecological province column in the plot table
 #'
-wiVR <- vitalRates(wiTB2, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
+wiVR <- vitalRates(wiTB, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
 wiVR <- wiVR %>% filter(SPCD %in% spcds)
 wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY) column for later referencing in the loop (each species-ecoregion)
+#'
 #'
 #'
 # ----Create the loop for all the species----
@@ -1069,7 +1077,7 @@ wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY
 dg.summ$KEY<-paste(dg.summ$ECO_PROVINCE,dg.summ$SPCD, sep="_")
 sp_eco_listWI<-unique(dg.summ$KEY)
 #' Create a table for maximum diameters per species per ecoregion
-temp<-wiTB2$TREE %>% merge(wi.sp, by='PLT_CN')%>%
+temp<-wiTB$TREE %>% merge(wi.sp, by='PLT_CN')%>%
   filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
 #
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
@@ -1080,7 +1088,7 @@ maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table 
 #' 
 #' 
 dia_list <- list()
-dia <- data.frame()
+
 #'
 #' 
 library(data.table)
@@ -1091,7 +1099,7 @@ for(i in 1:length(sp_eco_listWI)){
   age_dia<-data.frame()
   tempkey=sp_eco_listWI[i]
   #'
-  smallWorkingTB <- dg.summ %>% filter(KEY==sp_eco_listWI[i]) %>% ungroup()
+  smallWorkingTB <- dg.summ %>% filter(KEY==tempkey) %>% ungroup()
   fillTB <- tibble(sizeClass = as.double(1:4))
   smallWorkingTB <- smallWorkingTB %>% full_join(fillTB, by='sizeClass')
   smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,NA,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
@@ -1102,19 +1110,20 @@ for(i in 1:length(sp_eco_listWI)){
   smallWorkingTB$DIA_GROW<-ifelse(is.na(smallWorkingTB$DIA_GROW),0.04,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
   #'
-  smallGrowthMD <-tibble(KEY=sp_eco_listWI[i],AGE = 1, DIA = 1.0)
-  age <- 1 
+  smallGrowthMD <-tibble(KEY=tempkey,AGE = 1, DIA = 1.0)
+ 
   
   while(max(smallGrowthMD$DIA) < 5){
+    age <- max(smallGrowthMD$AGE) + 1
     subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
     diaGR <- subTB %>% slice(nrow(subTB))
-    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
-    age <- age + 1
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+
   }
   #'
   #' Now for the trees >=5"
   #' 
-  workingTB <- wiVR %>% filter(KEY==sp_eco_listWI[i] & !(is.na(DIA_GROW)))
+  workingTB <- wiVR %>% filter(KEY==tempkey & !(is.na(DIA_GROW)))
   #'
   growthMD <- smallGrowthMD
   age <- max(growthMD$AGE) + 1
@@ -1134,7 +1143,7 @@ for(i in 1:length(sp_eco_listWI)){
       diaGR <- subTB %>% slice(nrow(subTB))
     }
     
-    growthMD <- bind_rows(growthMD, tibble(KEY=sp_eco_listWI[i],AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
     age <- age + 1
   }
   age_dia<-rbind(age_dia, growthMD)
@@ -1144,15 +1153,180 @@ for(i in 1:length(sp_eco_listWI)){
            SPCD = as.integer(str_split(KEY, '_', simplify=T)[,2]),
            DIA = round((DIA * 2.54), digits = 3)) %>% 
     left_join(species_codes, by='SPCD')
+  if(sum(is.na(age_dia$Name)) > 0){print(tempkey)}
   
   dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
-  print(tempkey)
-  #'
-  dia<-rbind(dia, age_dia)
+  #print(tempkey)
+  
 }
-#'
-#' add to dia the values for the generic categories?
 
+print('End part 1')
+ecoSp <- expand.grid(unique(wiTB$PLOT$ECO_PROVINCE), spcds, stringsAsFactors = F) %>% 
+  mutate(SPECOKEY = str_c(Var1, Var2, sep = '_')) %>% select(SPECOKEY)
+
+msngEcoSP <- ecoSp %>% filter(!(SPECOKEY %in% names(dia_list)))
+
+maxtable.state <- wiTB$TREE %>% filter(STATUSCD == 1) %>%  group_by(SPCD) %>% #create the max diameter table by species-ecoregion
+  summarise(max_dia=max(DIA, na.rm=T))
+
+dg.summ.state <- wi.tg %>% group_by(SPCD, sizeClass) %>% summarise(DIA_GROW = mean(DIA_GROW, na.rm=T))%>% na.omit() #get the mean diameter growth and omit the na values (rows with no data for diameter growth)
+
+# Copy dia_list in case something goes wrong
+dia_list_cp <- dia_list
+
+#' Do it again for missing species - ecoregion combinations
+#' 
+
+for(i in 1:nrow(msngEcoSP)){
+  #"
+  age_dia <- data.frame()
+  tempkey <- msngEcoSP[i, 1]
+  spcd <- as.integer(str_split(tempkey, pattern = '_', simplify = T)[,2])
+  #'
+  smallWorkingTB <- dg.summ.state %>% filter(SPCD == spcd) %>% ungroup()
+  fillTB <- tibble(sizeClass = as.double(1:4))
+  smallWorkingTB <- smallWorkingTB %>% full_join(fillTB, by='sizeClass')
+  smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,NA,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup') %>% 
+    arrange(sizeClass)
+  
+  smallWorkingTB$DIA_GROW<-ifelse(is.na(smallWorkingTB$DIA_GROW),0.04,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  #'
+  smallGrowthMD <-tibble(KEY=tempkey,AGE = 1, DIA = 1.0)
+  
+  while(max(smallGrowthMD$DIA) < 5){
+    age <- max(smallGrowthMD$AGE) + 1
+    subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
+    diaGR <- subTB %>% slice(nrow(subTB))
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=msngEcoSP[i, 1],AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+    
+  }
+  #'
+  #' Now for the trees >=5"
+  #' 
+  workingTB <- stVR %>% filter(SPCD == spcd & !(is.na(DIA_GROW)))
+  #'
+  growthMD <- smallGrowthMD
+  age <- max(growthMD$AGE) + 1
+  #'
+  #' Fill in zeros
+  workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,NA,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  workingTB <- workingTB %>% fill(DIA_GROW, .direction = 'downup')
+  workingTB$DIA_GROW<-ifelse(is.na(workingTB$DIA_GROW),0.04,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  #'
+  while(max(growthMD$DIA) < maxtable.state$max_dia[which(maxtable.state$SPCD==spcd)]){
+    if (max(growthMD$DIA) < min(workingTB$sizeClass, na.rm = T))
+    {
+      diaGR <- subTB %>% slice(1)
+    } else {
+      subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
+      diaGR <- subTB %>% slice(nrow(subTB))
+    }
+    
+    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    age <- age + 1
+  }
+  age_dia<-rbind(age_dia, growthMD)
+  
+  age_dia <- age_dia %>% 
+    mutate(ECO_PROVINCE = str_split(KEY, '_', simplify=T)[,1],
+           SPCD = as.integer(str_split(KEY, '_', simplify=T)[,2]),
+           DIA = round((DIA * 2.54), digits = 3)) %>% 
+    left_join(species_codes, by='SPCD')
+  if(sum(is.na(age_dia$Name)) > 0){print(tempkey)}
+
+  dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
+  #print(tempkey)
+  
+}
+print('End part 2')
+
+#' add to dia the values for the generic categories?
+genericSpLst <- list(l_tohard = 318,
+                     l_toconi = 12,
+                     l_inhard = 746,
+                     l_inconi = 125,
+                     s_tohard = 701,
+                     s_inhard = 500)
+
+for (i in 1:length(genericSpLst))
+{
+  age_dia <- data.frame()
+  spcd <- genericSpLst[[i]]
+  #'
+  smallWorkingTB <- dg.summ.state %>% filter(SPCD == spcd) %>% ungroup()
+  fillTB <- tibble(sizeClass = as.double(1:4))
+  smallWorkingTB <- smallWorkingTB %>% full_join(fillTB, by='sizeClass')
+  smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,NA,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup') %>% 
+    arrange(sizeClass)
+  
+  smallWorkingTB$DIA_GROW<-ifelse(is.na(smallWorkingTB$DIA_GROW),0.04,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  #'
+  smallGrowthMD <-tibble(KEY=tempkey,AGE = 1, DIA = 1.0)
+  
+  while(max(smallGrowthMD$DIA) < 5){
+    age <- max(smallGrowthMD$AGE) + 1
+    subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
+    diaGR <- subTB %>% slice(nrow(subTB))
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+
+  }
+  #'
+  #' Now for the trees >=5"
+  #' 
+  workingTB <- stVR %>% filter(SPCD == spcd & !(is.na(DIA_GROW)))
+  #'
+  growthMD <- smallGrowthMD
+  age <- max(growthMD$AGE) + 1
+  #'
+  #' Fill in zeros
+  workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,NA,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  workingTB <- workingTB %>% fill(DIA_GROW, .direction = 'downup')
+  workingTB$DIA_GROW<-ifelse(is.na(workingTB$DIA_GROW),0.04,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
+  
+  #'
+  while(max(growthMD$DIA) < maxtable.state$max_dia[which(maxtable.state$SPCD==spcd)]){
+    if (max(growthMD$DIA) < min(workingTB$sizeClass, na.rm = T))
+    {
+      diaGR <- subTB %>% slice(1)
+    } else {
+      subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
+      diaGR <- subTB %>% slice(nrow(subTB))
+    }
+    
+    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    age <- age + 1
+  }
+  age_dia<-rbind(age_dia, growthMD) %>%       
+    mutate(Name = names(genericSpLst)[i], 
+           DIA = round((DIA * 2.54), digits = 3))
+  
+
+  
+  for (j in unique(wiTB$PLOT$ECO_PROVINCE))
+  {
+    tempkey <- str_c(j, names(genericSpLst)[i])
+    
+    age_dia <- age_dia %>% 
+      mutate(ECO_PROVINCE = j)
+    if(sum(is.na(age_dia$Name)) > 0){print(tempkey)}
+    
+    dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
+    #print(tempkey)
+  }
+  
+}
+
+# Check out the maximum ages
+check <- do.call(rbind.data.frame, dia_list)
+maxAge <- do.call(rbind.data.frame, dia_list) %>% group_by(Name) %>% summarise(MAXAGE = max(AGE))
+table(do.call(rbind.data.frame, dia_list) %>% select(Name, ECO_PROVINCE))
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
