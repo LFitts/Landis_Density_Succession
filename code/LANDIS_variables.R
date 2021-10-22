@@ -686,7 +686,7 @@ close(fileConn)
 #' Read in the data for Wisconsin
 #' 
 #WI_COND<-fread("data/main_WI_2020/WI_COND.csv")#read the condition table
-#WI_PLOT<-fread("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
 #fiaDir <- 'D:/fia/rFIA'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
@@ -696,8 +696,8 @@ WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
 
 
 #WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
-#WI_TREE <- WI_TREE %>% mutate(CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
-#WI_PLOT <- WI_PLOT %>% mutate(CN = as.character(CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
+WI_TREE <- WI_TREE %>% mutate(CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
+WI_PLOT <- WI_PLOT %>% mutate(CN = as.character(CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
 
 
 #' 
@@ -742,7 +742,7 @@ plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1,
 #  filter(KEY %in% unique(plt_list$KEY))
 #filter(tKEY %in% unique(plt_list$tKEY))
 
-WI_TREE_SUB <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_')) %>% 
+WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_')) %>% 
   filter(SUBKEY %in% unique(plt_list$SUBKEY))
 
 
@@ -762,9 +762,9 @@ siteSize = 169
 #WI_COND<- WI_COND %>% subset(CYCLE == 8) %>% #WHY CYCLE 8????
 #  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
 #  mutate(MAPCODE = 1:nrow(.))
-#WI_PLOT<-subset(WI_PLOT, CN %in% unique(WI_COND$PLT_CN)) %>%
-#  select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
-#  mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''))
+WI_PLOT <- WI_PLOT %>%  select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
+  mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
+         KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
 
 
 WI_TREE<- WI_TREE %>% 
@@ -808,11 +808,14 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Assign each tree in a subplot to an age cohort
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
+plt_exist <- plt_list %>% filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
+landGrow <- read.table('all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+
 MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
-outFile = file('LANDIS_work/all_txt/Initial_Community.txt', 'w')
+outFile = file('all_txt/Initial_Community.txt', 'w')
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
-for (i in 1:nrow(plt_list))
+for (i in 1:nrow(plt_exist))
 {
   #COND_SUB <- WI_COND[i,]
   #if (COND_SUB$COND_STATUS_CD != 1){next}
@@ -820,11 +823,13 @@ for (i in 1:nrow(plt_list))
   #if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
   #TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & Name %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
   #  select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
-  TREE_SUB <- WI_TREE %>% filter(SUBKEY == plt_list[i, 'SUBKEY'])
+  TREE_SUB <- WI_TREE %>% filter(SUBKEY == plt_exist[i, 'SUBKEY', drop=T])
   if (nrow(TREE_SUB) == 0){next}
   TREE_SUB <- TREE_SUB %>% filter(STATUSCD == 1 & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
     select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
   if (nrow(TREE_SUB) == 0){next}
+  
+  PLOT_SUB <- WI_PLOT %>% filter(CN == unique(TREE_SUB$PLT_CN))
   
   TREE_SUB <- TREE_SUB %>% rowwise() %>%
     mutate(AGECLASS = ageClass(str_replace(PLOT_SUB$ECOSECCD, ' ', ''), Name, (DIA * 2.54)),
@@ -837,19 +842,18 @@ for (i in 1:nrow(plt_list))
     summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
     mutate(ICSTRING = paste0(' ', AGECLASS, ' (', TREESUM, ')'))
   
-  for (j in unique(TREE_GRP$SUBP))
-  {
-    TREE_OUT <- TREE_GRP %>% filter(SUBP == j) %>% group_by(Name) %>%
-      summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
-    
-    cat(paste('MapCode', PLOTMAPVALUE), file=outFile, sep='\n')
-    cat(TREE_OUT$ICSTRING, file=outFile, sep='\n')
-    cat('\n', file=outFile)
-    
-    out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_CN = as.character(COND_SUB$PLT_CN), SUBP = j)
-    MV_KEY <- rbind(MV_KEY, out_row)
-    PLOTMAPVALUE <- PLOTMAPVALUE + 1
-  }
+
+  TREE_OUT <- TREE_GRP %>% group_by(Name) %>%
+    summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
+  
+  cat(paste('MapCode', PLOTMAPVALUE), file=outFile, sep='\n')
+  cat(TREE_OUT$ICSTRING, file=outFile, sep='\n')
+  cat('\n', file=outFile)
+  
+  out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_KEY = plt_exist[i, 'SUBKEY', drop=T])
+  MV_KEY <- rbind(MV_KEY, out_row)
+  PLOTMAPVALUE <- PLOTMAPVALUE + 1
+  
   
 }
 close(outFile)
@@ -1326,13 +1330,13 @@ for (i in 1:length(genericSpLst))
 # Check out the maximum ages
 check <- do.call(rbind.data.frame, dia_list)
 maxAge <- do.call(rbind.data.frame, dia_list) %>% group_by(Name) %>% summarise(MAXAGE = max(AGE))
-table(do.call(rbind.data.frame, dia_list) %>% select(Name, ECO_PROVINCE))
+
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
-writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = "LANDIS_work/all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
+writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = "all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
 lapply(1:length(dia_list), function(i) write.table(dia_list[[i]],
-                                                   file = "LANDIS_work/all_txt/Ecoregion_diameter_table.txt",
+                                                   file = "all_txt/Ecoregion_diameter_table.txt",
                                                    row.names = F,
                                                    append = T,
                                                    quote = F,
