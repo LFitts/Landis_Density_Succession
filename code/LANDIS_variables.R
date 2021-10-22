@@ -991,7 +991,81 @@ write.table(biomass_coef, "LANDIS_work/all_txt/density_speciesparameters.txt", r
 #'###################################################################################
 #'
 #'
-#'
+#' Calculate basal area growth by ecoregion over time
+library(quantreg)
+
+
+
+
+#' Single example
+cohort_log <- read_csv('all_txt/Density_cohort_log.csv')
+
+ba_summ <- cohort_log %>% group_by(Time, EcoName, SiteIndex) %>% 
+  summarise(BASALAREA = sum((Diameter / 2.54)^2 * 0.005454154 / 0.0415)) %>% 
+  group_by(EcoName, Time) %>% summarise(MEANBA = mean(BASALAREA))
+
+ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
+  geom_line() +
+  geom_point()
+
+#' Loop to compare different MaxGSO 
+#' These files will need to be saved elsewhere or renamed for the different maximum-GSO alternatives
+#' since they will be overwritten
+#' I would recommend putting the MaxGSO value at the end of the file name
+#' Example = Density_cohort_log_MGS10.csv for the current MaxGSO of 1.0
+#' 
+fllst <- list.files('all_txt/', 'Density_cohort_log_')
+
+gso_comp <- tibble()
+
+for (i in fllst){
+  cohort_log <- read_csv(paste0('all_txt/', i))
+  
+  mgs <- sprintf("%0.1f", as.integer(str_split(str_replace(i, '[.]csv', ''), '_', simplify = T)[,4]) / 10)
+  ba_summ <- cohort_log %>% group_by(Time, EcoName, SiteIndex) %>% 
+    summarise(BASALAREA = sum((Diameter / 2.54)^2 * 0.005454154 / 0.0415)) %>% 
+    group_by(EcoName, Time) %>% 
+    summarise(MEANBA = mean(BASALAREA)) %>% 
+    mutate(MGS = as.numeric(mgs))
+  
+  gso_comp <- bind_rows(gso_comp, ba_summ)
+}
+
+#' LANDIS basal area model
+landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(BASALAREA))
+
+baModel = lm(MGS ~ maxBA, data=landisBA)
+
+#' Get basal area observations by plot, stocking level, and ecoregion
+#' 
+wiBA <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTK'), byPlot = T)
+wiBA <- wiBA %>% filter(PLOT_STATUS_CD == 1)
+
+ggplot(wiBA %>% filter(ECO_PROVINCE == '222M'), aes(x=ALSTK, y=BAA)) +
+  geom_point()
+
+#' Quantile regression stocking and basal area
+qs = c(0.95)
+
+subsec.quant = wiBA %>% 
+  split(.$ECO_PROVINCE) %>%
+  map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
+
+subsec.quant.pred = subsec.quant %>% 
+  imap(~ predict(.x, data.frame(ALSTK=100), tau=qs))
+
+#growingSpace = function(df)
+#{
+#  classNum = length(unique(df$BIOCLASS))
+#  ecoSection = str_sub(df$SUB, 1, -2)[1]
+#  predDF = data.frame(maxBA = subsec.quant.pred[[ecoSection]][(5-classNum):4])
+#  predGS = predict(baModel, data.frame(maxBA = predDF))
+#  df %>% mutate(MAXGS = predGS[df$BIOCLASS])
+#}
+
+current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE, .add=T) %>% group_split() %>% 
+  map_dfr(growingSpace)
+
 #' ##################################################################################
 # 14. Create table: Land use ----
 #'###################################################################################
