@@ -10,8 +10,8 @@ StartYear	2000
 SeedingAlgorithm	DensitySeeding
 
 
-InitialCommunities	initial-communities.txt
-InitialCommunitiesMap	initialcommunity_test.img
+InitialCommunities	Initial_Community.txt
+InitialCommunitiesMap	initialcommunity.img
 
 
 DensitySpeciesParameters	density_speciesparameters.txt

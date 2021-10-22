@@ -762,8 +762,8 @@ siteSize = 169
 #WI_COND<- WI_COND %>% subset(CYCLE == 8) %>% #WHY CYCLE 8????
 #  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
 #  mutate(MAPCODE = 1:nrow(.))
-WI_PLOT <- WI_PLOT %>%  select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
-  mutate(ECOSECCD = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
+WI_PLOT <- WI_PLOT %>%  dplyr::select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
+  mutate(ECO_PROVINCE = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
          KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
 
 
@@ -830,9 +830,9 @@ for (i in 1:nrow(plt_exist))
   if (nrow(TREE_SUB) == 0){next}
   
   PLOT_SUB <- WI_PLOT %>% filter(CN == unique(TREE_SUB$PLT_CN))
-  
+  ecoProv <- str_replace(PLOT_SUB$ECO_PROVINCE, ' ', '')
   TREE_SUB <- TREE_SUB %>% rowwise() %>%
-    mutate(AGECLASS = ageClass(str_replace(PLOT_SUB$ECOSECCD, ' ', ''), Name, (DIA * 2.54)),
+    mutate(AGECLASS = ageClass(ecoProv, Name, (DIA * 2.54)),
            TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
   
   TREE_SUB <- TREE_SUB %>% filter(AGECLASS < 1000)
@@ -850,7 +850,7 @@ for (i in 1:nrow(plt_exist))
   cat(TREE_OUT$ICSTRING, file=outFile, sep='\n')
   cat('\n', file=outFile)
   
-  out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_KEY = plt_exist[i, 'SUBKEY', drop=T])
+  out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_KEY = plt_exist[i, 'SUBKEY', drop=T], ECO_PROVINCE = ecoProv)
   MV_KEY <- rbind(MV_KEY, out_row)
   PLOTMAPVALUE <- PLOTMAPVALUE + 1
   
@@ -1428,9 +1428,10 @@ WI_PLOT_COORD<-WI_PLOT_COORD%>% select(STATECD, COUNTYCD, PLOT, INVYR, PLT_CN, E
 #' 
 #' Get a sequence of "map codes" for distinct ecoregions
 #' 
-eco_codes<-as.data.frame(unique(WI_PLOT$ECO_PROVINCE))
+eco_codes<-as.data.frame(unique(WI_PLOT$ECO_PROVINCE)) 
 names(eco_codes)<-"ECO_PROVINCE"
-eco_codes$Map_code_ecoregion<-seq(1,nrow(eco_codes), by=1)
+eco_codes <- eco_codes %>% arrange(ECO_PROVINCE) %>% mutate(Map_code_ecoregion = 1:nrow(eco_codes))
+
 #' 
 WI_PLOT_COORD<-merge(WI_PLOT_COORD,eco_codes, by="ECO_PROVINCE")
 WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
@@ -1460,17 +1461,18 @@ WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
 #writeRaster(ecoregion_map, "ecoregion_test.tif", NAflag=-9999) #can't save the ggplot into a spatial image
 #ggsave(file="ecoregion_test.tiff")
 
-WI_PLOT_COORD<-WI_PLOT_COORD[order(WI_PLOT_COORD$SUBP_ID, decreasing=F),]# reorder the dataframe for reproducibility later on when we create new rasters and want to maintain the same subplot distribution
+
+#WI_PLOT_COORD<-WI_PLOT_COORD[order(WI_PLOT_COORD$SUBP_ID, decreasing=F),]# reorder the dataframe for reproducibility later on when we create new rasters and want to maintain the same subplot distribution
 #'
 initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up laterLU1<-LU2<-LU3<-LU4<-LU5<-LU6<-LU7<-LU8<-LU9<-LU10<-LU11<-LU12<-LU13<-LU14<-LU15<-LU16<-LU17<-LU18<-LU19<-LU20<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6) #Create empty land use rasters to be filled later
 res(ecoregion_map) #check resolution ...IS THIS IN METERS?
 ncell(ecoregion_map) #check number of cells
-values(ecoregion_map)<-WI_PLOT_COORD$Map_code_ecoregion #add values to the rasters
-values(initial_communities_map)<-WI_PLOT_COORD$SUBP_ID
-values(subplot_key)<-as.factor(WI_PLOT_COORD$model_run_key)
+#values(ecoregion_map)<-WI_PLOT_COORD$Map_code_ecoregion #add values to the rasters
+#values(initial_communities_map)<-WI_PLOT_COORD$SUBP_ID
+#values(subplot_key)<-as.factor(WI_PLOT_COORD$model_run_key)
 
 MV_KEY <- MV_KEY %>% 
-left_join(WI_PLOT %>% select(CN, ECO_PROVINCE) %>% mutate(CN = as.character(CN)), by = c('PLT_CN' = 'CN')) %>% 
+left_join(WI_PLOT %>% dplyr::select(KEY, ECO_PROVINCE), by = c('KEY')) %>% 
 left_join(eco_codes, by='ECO_PROVINCE')
 
 initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
@@ -1485,11 +1487,11 @@ ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #b1 <- brick(r1, r2, r3) #brick raster
 #'
 #' Save the files
-writeRaster(ecoregion_map, "all_txt/ecoregion_test.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+writeRaster(ecoregion_map, "all_txt/ecoregion.img", NAflag=-9999, overwrite=T, datatype='INT2S')
 
 plot(ecoregion_map)
 #'
-writeRaster(initial_communities_map, "all_txt/initialcommunity_test.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+writeRaster(initial_communities_map, "all_txt/initialcommunity.img", NAflag=-9999, overwrite=T, datatype='INT2S')
 
 #'
 #' 
