@@ -401,7 +401,7 @@ close(fileConn)
 #'
 #' Read in the species attributes table
 #'
-species_attributes<-read.csv('LANDIS_work/data/excel_created/species_attributes.CSV')
+species_attributes<-read.csv('data/species_attributes.CSV')
 #'
 #' Create a "name" column with the format Landis uses (4 letters of the genus+4letters of the species)
 species_attributes<-tidyr::separate(species_attributes, Scientific_name, c("genus", "species"), "\\s(?:.+\\s)?") #separate the string for scientific name into character vectors divided by the space
@@ -444,8 +444,8 @@ species_attributes<-species_attributes %>%
 names(species_attributes)[1]<-">> Name"
 #'
 #' Write the species file
-writeLines(c(paste("LandisData", "Species", sep="\t"),"\n"), con = "LANDIS_work/all_txt/species.txt") #creates the independent lines of text
-write.table(species_attributes, "LANDIS_work/all_txt/species.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
+writeLines(c(paste("LandisData", "Species", sep="\t"),"\n"), con = "all_txt/species.txt") #creates the independent lines of text
+write.table(species_attributes, "all_txt/species.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
 #' 
 #' ##################################################################################
 # 6. Create table: ecoregion (ready) ---- 
