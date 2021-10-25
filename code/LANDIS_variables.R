@@ -1038,6 +1038,8 @@ for (i in fllst){
     geom_point()
   #  ggsave(file=paste("figures/BA_MGS_LANDIS",mgs,".tiff", sep=""), plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 }
+
+#save(gso_comp, file = 'code/gso_comp.RData')
 #' Create a plot visualizing the results for the different maximum growing spaces run
 par(mfrow=c(3,3))
 ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
@@ -1049,7 +1051,8 @@ ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName
 ggsave(file="figures/BA_MGS_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 #'
 #' LANDIS basal area model
-landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
+landisBA = gso_comp %>% group_by(MGS, EcoName) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
+save(landisBA, file = 'code/landisBA.RData')
 #'
 baModel = lm(MGS ~ maxBA, data=landisBA)
 save(baModel, file = 'code/baModel.RData')
