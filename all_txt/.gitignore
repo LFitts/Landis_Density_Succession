@@ -1,6 +1,6 @@
 Landis-log.txt
 ./output
-Density_cohort_log.csv
-Density_mortality_output.csv
-spp-density-log.csv
+Density_cohort_log*
+Density_mortality_output*
+spp-density-log*
 ./Metadata

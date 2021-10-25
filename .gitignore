@@ -17,7 +17,6 @@ _book
 
 *.Rproj.user
 *.Rhistory
-*.RData
 *.Ruserdata
 *data/
 .Rproj.user

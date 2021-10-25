@@ -22,6 +22,10 @@ WI_SUBPLOT<-fread("data/main_WI_2020/WI_SUBPLOT.csv", na.strings = "NA")
 WI_SUBP_COND<-fread("data/main_WI_2020/WI_SUBP_COND.csv", na.strings = "NA")
 WI_SITETREE<-fread("data/main_WI_2020/WI_SITETREE.csv", na.strings = "NA")
 #'
+WI_COND<-fread("H:/FIA_Wisconsin/Landis_Density_Succession/data/main_WI_2020/WI_COND.csv", na.strings = "NA")#read the condition table
+WI_PLOT<-fread("H:/FIA_Wisconsin/Landis_Density_Succession/data/main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
+WI_TREE<-fread("H:/FIA_Wisconsin/Landis_Density_Succession/data/main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
+#'
 #'
 #' Just keep records from 2000 on. This is when the annual inventory for WI started
 #'
@@ -1048,6 +1052,7 @@ ggsave(file="figures/BA_MGS_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=
 landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
 #'
 baModel = lm(MGS ~ maxBA, data=landisBA)
+save(baModel, file = 'code/baModel.RData')
 #'
 #' Get basal area observations by plot, stocking level, and ecoregion
 #' 
