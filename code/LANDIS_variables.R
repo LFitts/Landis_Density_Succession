@@ -990,23 +990,20 @@ write.table(biomass_coef, "LANDIS_work/all_txt/density_speciesparameters.txt", r
 # 13. Create table: Dynamic ecoregion input ----
 #'###################################################################################
 #'
-#'
 #' Calculate basal area growth by ecoregion over time
+#install.packages("quantreg")
 library(quantreg)
-
-
-
-
+#'
 #' Single example
-cohort_log <- read_csv('all_txt/Density_cohort_log.csv')
-
-ba_summ <- cohort_log %>% group_by(Time, EcoName, SiteIndex) %>% 
-  summarise(BASALAREA = sum((Diameter / 2.54)^2 * 0.005454154 / 0.0415)) %>% 
-  group_by(EcoName, Time) %>% summarise(MEANBA = mean(BASALAREA))
-
-ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
-  geom_line() +
-  geom_point()
+#cohort_log <- read_csv('all_txt/Density_cohort_log_MGS100.csv')
+#
+#ba_summ1 <- cohort_log %>% group_by(Time, EcoName, SiteIndex) %>% 
+#  summarise(BASALAREA = sum((Diameter / 2.54)^2 * 0.005454154 / 0.0415)) %>% 
+#  group_by(EcoName, Time) %>% summarise(MEANBA = mean(BASALAREA))
+#
+#plot_ba<-ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
+#  geom_line() +
+#  geom_point()
 
 #' Loop to compare different MaxGSO 
 #' These files will need to be saved elsewhere or renamed for the different maximum-GSO alternatives
@@ -1014,46 +1011,72 @@ ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
 #' I would recommend putting the MaxGSO value at the end of the file name
 #' Example = Density_cohort_log_MGS10.csv for the current MaxGSO of 1.0
 #' 
-fllst <- list.files('all_txt/', 'Density_cohort_log_')
-
+fllst <- list.files('all_txt/', 'Density_cohort_log_') #Read in the files uploaded from LANDIS runs
+#
 gso_comp <- tibble()
-
+#
 for (i in fllst){
   cohort_log <- read_csv(paste0('all_txt/', i))
-  
-  mgs <- sprintf("%0.1f", as.integer(str_split(str_replace(i, '[.]csv', ''), '_', simplify = T)[,4]) / 10)
+  # mgs <- sprintf("%0.1f", as.integer(str_split(str_replace(i, '[.]csv', ''), '_', simplify = T)[,4]) / 10) #something is producing an NA value here
+  mgs<-str_split(str_replace(i, '[.]csv', ''), '_', simplify = T)[,4] #obtain the 4th column of the string in the file's name (MGS100)
+  mgs<-(as.integer(str_extract(mgs, "[0-9]+")))/100 #extract numbers from string and divide them by 100 to represent the units of the maximum growing space
+  mgs <- sprintf("%0.2f", mgs) #leave 2 digits
   ba_summ <- cohort_log %>% group_by(Time, EcoName, SiteIndex) %>% 
     summarise(BASALAREA = sum((Diameter / 2.54)^2 * 0.005454154 / 0.0415)) %>% 
     group_by(EcoName, Time) %>% 
     summarise(MEANBA = mean(BASALAREA)) %>% 
     mutate(MGS = as.numeric(mgs))
-  
+  #'  
   gso_comp <- bind_rows(gso_comp, ba_summ)
+  #"  
+  plot_ba<-ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
+    geom_line() +
+    geom_point()
+  #  ggsave(file=paste("figures/BA_MGS_LANDIS",mgs,".tiff", sep=""), plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 }
-
+#' Create a plot visualizing the results for the different maximum growing spaces run
+par(mfrow=c(3,3))
+ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
+  geom_line() +
+  geom_point()+
+  facet_wrap(~MGS)
+#facet_grid(. ~ MGS)
+#'
+ggsave(file="figures/BA_MGS_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
 #' LANDIS basal area model
-landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(BASALAREA))
-
+landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
+#'
 baModel = lm(MGS ~ maxBA, data=landisBA)
-
+#'
 #' Get basal area observations by plot, stocking level, and ecoregion
 #' 
 wiBA <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTK'), byPlot = T)
 wiBA <- wiBA %>% filter(PLOT_STATUS_CD == 1)
-
-ggplot(wiBA %>% filter(ECO_PROVINCE == '222M'), aes(x=ALSTK, y=BAA)) +
-  geom_point()
-
+#'
+#' Get a graph for one ecoregion
+#ggplot(wiBA %>% filter(ECO_PROVINCE == '222M'), aes(x=ALSTK, y=BAA)) +
+#  geom_point()
+#'
+#' Get the graph for all ecoregions
+#' 
+FIA_mgs_plot<-ggplot(wiBA, aes(x=ALSTK, y=BAA)) +
+  geom_point()+
+  facet_wrap(~ECO_PROVINCE)
+#'
+ggsave(file="figures/BA_MGS_FIA.tiff", plot = FIA_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+#'
+#
 #' Quantile regression stocking and basal area
 qs = c(0.95)
-
-subsec.quant = wiBA %>% 
+#'
+subsec.quant = wiBA %>% #not sure what is happening from here onward???????
   split(.$ECO_PROVINCE) %>%
   map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
-
+#'
 subsec.quant.pred = subsec.quant %>% 
   imap(~ predict(.x, data.frame(ALSTK=100), tau=qs))
-
+#'
 #growingSpace = function(df)
 #{
 #  classNum = length(unique(df$BIOCLASS))
@@ -1069,6 +1092,244 @@ current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE,
 #' ##################################################################################
 # 14. Create table: Land use ----
 #'###################################################################################
+#'
+#'
+#' # 1. Read in the FIA data for the state of Wisconsin
+#' 
+#' Read in the data for Wisconsin (run from the first section of the code)
+#' 
+#WI_COND<-fread("data/main_WI_2020/WI_COND.csv")#read the condition table
+#WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+#fiaDir <- 'D:/fia/rFIA'
+#wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("TREE"), inMemory = T, nCores = 3)
+#WI_TREE <- wiTB$TREE %>% filter(INVYR >= 2000)
+#WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+#
+#WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
+WI_TREE <- WI_TREE %>% mutate(TREE_CN = as.character(TREE_CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
+WI_PLOT <- WI_PLOT %>% mutate(PLT_CN = as.character(PLT_CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
+#' 
+#' Recode species
+#' Vectors containing generic categories
+vec99991<-c(531,462)
+vec99992<-c(202,57)
+vec99993<-c(901,373,552)
+vec99994<-c(68)
+vec99995<-c(763,319,682,921,923,920,681,501,357)
+vec99996<-c(500,356,761,660,922,766,502,760,934)
+#' 
+#' Rename the species codes
+WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
+                     ifelse(WI_TREE$SPCD ==975|WI_TREE$SPCD ==317|WI_TREE$SPCD ==977|WI_TREE$SPCD ==974,972,
+                            ifelse(WI_TREE$SPCD ==602|WI_TREE$SPCD ==601|WI_TREE$SPCD ==600,402,
+                                   ifelse(WI_TREE$SPCD ==741|WI_TREE$SPCD ==742|WI_TREE$SPCD ==752,746,
+                                          ifelse(WI_TREE$SPCD ==130|WI_TREE$SPCD ==136,125,
+                                                 ifelse(WI_TREE$SPCD ==804,802,
+                                                        ifelse(WI_TREE$SPCD ==91|WI_TREE$SPCD ==96,94,
+                                                               ifelse(WI_TREE$SPCD ==314|WI_TREE$SPCD ==320,318,
+                                                                      ifelse(WI_TREE$SPCD ==826,823,
+                                                                             ifelse(WI_TREE$SPCD ==70,71,
+                                                                                    ifelse(WI_TREE$SPCD ==546,544,
+                                                                                           ifelse(WI_TREE$SPCD ==10|WI_TREE$SPCD ==15,12,
+                                                                                                  ifelse(WI_TREE$SPCD == 830,809,
+                                                                                                         ifelse(WI_TREE$SPCD %in% vec99991,99991,
+                                                                                                                ifelse(WI_TREE$SPCD %in% vec99992,99992,
+                                                                                                                       ifelse(WI_TREE$SPCD %in% vec99993,99993,
+                                                                                                                              ifelse(WI_TREE$SPCD %in% vec99994,99994,
+                                                                                                                                     ifelse(WI_TREE$SPCD %in% vec99995,99995,
+                                                                                                                                            ifelse(WI_TREE$SPCD %in% vec99996,99996,WI_TREE$SPCD)))))))))))))))))))
+
+#' 
+#'
+plt_list <- read_csv('data/WI_PLOT_LIST_updated.CSV')
+plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))
+#'
+#'
+WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
+  filter(SUBKEY %in% unique(plt_list$SUBKEY))
+#'
+#"
+#FIA species name reference table
+#Available https://apps.fs.usda.gov/fia/datamart/CSV/REF_SPECIES.csv 
+#ref <- read_csv('data/REF_SPECIES.csv')
+#ref <- ref %>% mutate(LANDSPEC = paste0(tolower(str_sub(GENUS,1,4)), str_sub(SPECIES,1,4))) %>%
+#  select(SPCD, LANDSPEC)
+ref<-species_codes
+#Area of site (raster cell size squared in meters)
+siteSize = 169
+#'
+#' ###########################
+#'
+#' Creating a change database
+#' 
+#' Put the tree table into a wide format
+plt_codes<-plt_list %>% select(SUBKEY,t0,t1,t2,t3)%>%
+  pivot_longer(t0:t3, names_to="Time", values_to="INVYR")%>%
+  filter(INVYR!=0)
+#' 
+tree_long<-merge(WI_TREE, plt_codes, by=c("SUBKEY","INVYR"), all.x=T)%>%
+  select(SUBKEY, STATECD, COUNTYCD, PLOT, SUBP, TREE, INVYR, Time, SPCD, DIA, AGENTCD, STATUSCD, TPA_UNADJ)
+#'
+#' Create a column for if the tree was killed or not
+tree_long$AGENTCD[is.na(tree_long$AGENTCD)] <- 0 #fill NA's with zeros
+#'  
+#' 
+tree_wide <- tree_long %>%
+  pivot_wider(id_cols=c(SUBKEY, STATECD, COUNTYCD, PLOT, SUBP, TREE, SPCD, TPA_UNADJ), names_from = Time, values_from = c("INVYR", "STATUSCD", "DIA", "AGENTCD"))
+#' 
+#' Fill in missing values
+tree_wide[is.na(tree_wide)] <- 0 #fill NA's with zeros
+#'
+#' Now create an event/land use column
+#' 
+land_use<-tree_wide
+land_use$event<-ifelse(land_use$DIA_t0==0 & land_use$DIA_t1!=0,"plant_t1",
+                       ifelse(land_use$DIA_t1==0 & land_use$DIA_t2!=0,"plant_t2",
+                              ifelse(land_use$DIA_t2==0 & land_use$DIA_t3!=0,"plant_t3",
+                                     ifelse(land_use$AGENTCD_t1!=0 ,"kill_t1",
+                                            ifelse(land_use$AGENTCD_t2!=0 ,"kill_t2",
+                                                   ifelse(land_use$AGENTCD_t3!=0 ,"kill_t3", "no_change"))))))
+#'
+#' Filter out trees that started dead at t0
+#' 
+land_use<-land_use%>% filter(STATUSCD_t0!=2) #HOW ABOUT STATUSCD 3 (CUT/REMOVED BY HUMAN)
+#' 
+#' Filter out trees with no change
+land_use_change<-land_use %>% filter(event!="no_change")
+#' 
+#' Now create a column for action, action year, and diameter at the action time to reflect plant/kill, the year when to do so, and the diameter of the tree to plant or remove
+land_use_change$ACTION_YEAR<-ifelse(land_use_change$event=="plant_t1",land_use_change$INVYR_t1,
+                                    ifelse(land_use_change$event=="plant_t2",land_use_change$INVYR_t2,
+                                           ifelse(land_use_change$event=="plant_t3",land_use_change$INVYR_t3,
+                                                  ifelse(land_use_change$event=="kill_t1",land_use_change$INVYR_t1,
+                                                         ifelse(land_use_change$event=="kill_t2",land_use_change$INVYR_t2,
+                                                                ifelse(land_use_change$event=="kill_t3",land_use_change$INVYR_t3,NA))))))
+#' 
+land_use_change$ACTION<-ifelse(land_use_change$event=="plant_t1"|land_use_change$event=="plant_t2"|land_use_change$event=="plant_t3", "plant",
+                               ifelse(land_use_change$event=="kill_t1"|land_use_change$event=="kill_t2"|land_use_change$event=="kill_t3", "remove", NA))
+#' 
+land_use_change$DIA_ACTION<-ifelse(land_use_change$event=="plant_t1",land_use_change$DIA_t1,
+                                   ifelse(land_use_change$event=="plant_t2",land_use_change$DIA_t2,
+                                          ifelse(land_use_change$event=="plant_t3",land_use_change$DIA_t3,
+                                                 ifelse(land_use_change$event=="kill_t1",land_use_change$DIA_t1,
+                                                        ifelse(land_use_change$event=="kill_t2",land_use_change$DIA_t2,
+                                                               ifelse(land_use_change$event=="kill_t3",land_use_change$DIA_t3,NA))))))
+#' 
+#' Transform diameter to cm and action year to time step
+#' 
+land_use_change<-land_use_change%>% mutate(TIME_STEP=ACTION_YEAR-2000,
+                                           DIA_ACTION= DIA_ACTION*2.54)
+#' 
+#' 
+#' Add the species names
+#' 
+land_use_change<-merge(land_use_change,species_codes, by="SPCD", all.x=T)
+#' Select variables of interest
+#' 
+land_use_change<-land_use_change%>% select(SUBKEY, STATECD, COUNTYCD,PLOT,SUBP,TREE,TPA_UNADJ, SPCD, Name, ACTION, TIME_STEP, DIA_ACTION)
+#' 
+#'
+#' 
+#' ########################### THIS IS FROM THE INITIAL COMMUNITIES CODE, HAVEN'T CHANGED IT YET
+#' Select variables of interest
+#'
+WI_PLOT <- WI_PLOT %>%  dplyr::select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, ECOSUBCD) %>%
+  mutate(ECO_PROVINCE = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
+         KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
+
+
+WI_TREE<- WI_TREE %>% 
+  select(TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
+         DIA, AGENTCD, MORTYR, STANDING_DEAD_CD, 
+         TPA_UNADJ, SUBKEY) %>%
+  left_join(., ref, by = 'SPCD')
+#'
+#' Function to convert species and diameter to age cohort
+#' 
+ageClass <- function(ecoregion, spcd, diameter)
+{
+  if (is.na(diameter))
+  {
+    return(NA)
+  }
+  if (!((spcd %in% landGrow$SPECIES) & (ecoregion %in% landGrow$ECOREGION)))
+  {
+    return(NA)
+  }
+  if (!exists('landGrow'))
+  {
+    landGrow <- read.table('LANDIS_work/all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+  }
+  if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
+  {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  if (diameter >= max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
+  {return(max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  minAgeClass <- abs(diameter - landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'DIAMETER']) 
+  maxAgeClass <- abs(diameter - landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'DIAMETER'])
+  if (minAgeClass <= maxAgeClass) 
+  {return(landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'AGE'])}
+  else 
+  {return(landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'AGE'])}
+}
+
+#'
+#' Loop through conditions and subplots
+#' Assign each tree in a subplot to an age cohort
+#' Write age cohort and number of trees out to LANDIS initial community file
+#' 
+plt_exist <- plt_list %>% filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
+landGrow <- read.table('all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+
+MV_KEY <- data.frame()
+PLOTMAPVALUE <- 1
+outFile = file('all_txt/Initial_Community.txt', 'w')
+cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
+for (i in 1:nrow(plt_exist))
+{
+  #COND_SUB <- WI_COND[i,]
+  #if (COND_SUB$COND_STATUS_CD != 1){next}
+  #PLOT_SUB <- WI_PLOT %>% filter(CN == COND_SUB$PLT_CN)
+  #if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
+  #TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & Name %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+  #  select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
+  TREE_SUB <- WI_TREE %>% filter(SUBKEY == plt_exist[i, 'SUBKEY', drop=T])
+  if (nrow(TREE_SUB) == 0){next}
+  TREE_SUB <- TREE_SUB %>% filter(STATUSCD == 1 & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+    select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
+  if (nrow(TREE_SUB) == 0){next}
+  
+  PLOT_SUB <- WI_PLOT %>% filter(CN == unique(TREE_SUB$PLT_CN))
+  ecoProv <- str_replace(PLOT_SUB$ECO_PROVINCE, ' ', '')
+  TREE_SUB <- TREE_SUB %>% rowwise() %>%
+    mutate(AGECLASS = ageClass(ecoProv, Name, (DIA * 2.54)),
+           TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
+  
+  TREE_SUB <- TREE_SUB %>% filter(AGECLASS < 1000)
+  
+  
+  TREE_GRP <- TREE_SUB %>% group_by(SUBP, Name, AGECLASS) %>%
+    summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
+    mutate(ICSTRING = paste0(' ', AGECLASS, ' (', TREESUM, ')'))
+  
+  
+  TREE_OUT <- TREE_GRP %>% group_by(Name) %>%
+    summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
+  
+  cat(paste('MapCode', PLOTMAPVALUE), file=outFile, sep='\n')
+  cat(TREE_OUT$ICSTRING, file=outFile, sep='\n')
+  cat('\n', file=outFile)
+  
+  out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_KEY = plt_exist[i, 'SUBKEY', drop=T], ECO_PROVINCE = ecoProv)
+  MV_KEY <- rbind(MV_KEY, out_row)
+  PLOTMAPVALUE <- PLOTMAPVALUE + 1
+  
+  
+}
+close(outFile)
+write_csv(MV_KEY, 'output/MAPVALUE_KEY.csv')
+#' 
+#'
+#'
 #'
 #' ##################################################################################
 # 15. Create table: Ecoregion parameter density (ready)----
