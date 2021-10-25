@@ -22,10 +22,6 @@ WI_SUBPLOT<-fread("data/main_WI_2020/WI_SUBPLOT.csv", na.strings = "NA")
 WI_SUBP_COND<-fread("data/main_WI_2020/WI_SUBP_COND.csv", na.strings = "NA")
 WI_SITETREE<-fread("data/main_WI_2020/WI_SITETREE.csv", na.strings = "NA")
 #'
-WI_COND<-fread("H:/FIA_Wisconsin/Landis_Density_Succession/data/main_WI_2020/WI_COND.csv", na.strings = "NA")#read the condition table
-WI_PLOT<-fread("H:/FIA_Wisconsin/Landis_Density_Succession/data/main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
-WI_TREE<-fread("H:/FIA_Wisconsin/Landis_Density_Succession/data/main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
-#'
 #'
 #' Just keep records from 2000 on. This is when the annual inventory for WI started
 #'
@@ -763,8 +759,9 @@ siteSize = 169
 #' Subset for ONE county (COUNTYCD =1) and just keep records from cycle 8
 #' and select variables of interest
 #'
-#WI_COND<- WI_COND %>% subset(CYCLE == 8) %>% #WHY CYCLE 8????
-#  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
+WI_COND<- WI_COND %>% #WHY CYCLE 8????
+  select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
+  mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
 #  mutate(MAPCODE = 1:nrow(.))
 WI_PLOT <- WI_PLOT %>%  dplyr::select(CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
   mutate(ECO_PROVINCE = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
@@ -1015,7 +1012,7 @@ library(quantreg)
 #' I would recommend putting the MaxGSO value at the end of the file name
 #' Example = Density_cohort_log_MGS10.csv for the current MaxGSO of 1.0
 #' 
-fllst <- list.files('all_txt/', 'Density_cohort_log_') #Read in the files uploaded from LANDIS runs
+fllst <- list.files(path = 'all_txt/', pattern = 'Density_cohort_log_') #Read in the files uploaded from LANDIS runs
 #
 gso_comp <- tibble()
 #
@@ -1038,8 +1035,6 @@ for (i in fllst){
     geom_point()
   #  ggsave(file=paste("figures/BA_MGS_LANDIS",mgs,".tiff", sep=""), plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 }
-
-#save(gso_comp, file = 'code/gso_comp.RData')
 #' Create a plot visualizing the results for the different maximum growing spaces run
 par(mfrow=c(3,3))
 ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
@@ -1051,16 +1046,17 @@ ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName
 ggsave(file="figures/BA_MGS_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 #'
 #' LANDIS basal area model
-landisBA = gso_comp %>% group_by(MGS, EcoName) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
-save(landisBA, file = 'code/landisBA.RData')
+landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
 #'
 baModel = lm(MGS ~ maxBA, data=landisBA)
-save(baModel, file = 'code/baModel.RData')
+
+load('code/baModel.RData')
 #'
 #' Get basal area observations by plot, stocking level, and ecoregion
 #' 
 wiBA <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTK'), byPlot = T)
 wiBA <- wiBA %>% filter(PLOT_STATUS_CD == 1)
+wiSUMM <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTKCD'), variance = T)
 #'
 #' Get a graph for one ecoregion
 #ggplot(wiBA %>% filter(ECO_PROVINCE == '222M'), aes(x=ALSTK, y=BAA)) +
@@ -1085,14 +1081,15 @@ subsec.quant = wiBA %>% #not sure what is happening from here onward???????
 subsec.quant.pred = subsec.quant %>% 
   imap(~ predict(.x, data.frame(ALSTK=100), tau=qs))
 #'
-#growingSpace = function(df)
-#{
-#  classNum = length(unique(df$BIOCLASS))
-#  ecoSection = str_sub(df$SUB, 1, -2)[1]
-#  predDF = data.frame(maxBA = subsec.quant.pred[[ecoSection]][(5-classNum):4])
-#  predGS = predict(baModel, data.frame(maxBA = predDF))
-#  df %>% mutate(MAXGS = predGS[df$BIOCLASS])
-#}
+
+growingSpace = function(df)
+{
+  classNum = length(names(df))
+  ecoSection = names(df)
+  predDF = data.frame(maxBA = subsec.quant.pred[[ecoSection]])
+  predGS = predict(baModel, data.frame(maxBA = predDF))
+  df %>% mutate(MAXGS = predGS[df$BIOCLASS])
+}
 
 current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE, .add=T) %>% group_split() %>% 
   map_dfr(growingSpace)
@@ -1106,16 +1103,17 @@ current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE,
 #' 
 #' Read in the data for Wisconsin (run from the first section of the code)
 #' 
-#WI_COND<-fread("data/main_WI_2020/WI_COND.csv")#read the condition table
-#WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_COND<-read_csv("data/main_WI_2020/WI_COND.csv")#read the condition table
+WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
 #fiaDir <- 'D:/fia/rFIA'
 #wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("TREE"), inMemory = T, nCores = 3)
-#WI_TREE <- wiTB$TREE %>% filter(INVYR >= 2000)
-#WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+
+WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_TREE <- WI_TREE %>% filter(INVYR >= 2000)
 #
-#WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
-WI_TREE <- WI_TREE %>% mutate(TREE_CN = as.character(TREE_CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
-WI_PLOT <- WI_PLOT %>% mutate(PLT_CN = as.character(PLT_CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
+WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
+WI_TREE <- WI_TREE %>% mutate(TREE_CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
+WI_PLOT <- WI_PLOT %>% mutate(PLT_CN = as.character(CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
 #' 
 #' Recode species
 #' Vectors containing generic categories
@@ -1155,6 +1153,8 @@ plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1),
 #'
 WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
   filter(SUBKEY %in% unique(plt_list$SUBKEY))
+
+WI_COND <- WI_COND %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
 #'
 #"
 #FIA species name reference table
@@ -1222,19 +1222,34 @@ land_use_change$DIA_ACTION<-ifelse(land_use_change$event=="plant_t1",land_use_ch
                                                  ifelse(land_use_change$event=="kill_t1",land_use_change$DIA_t1,
                                                         ifelse(land_use_change$event=="kill_t2",land_use_change$DIA_t2,
                                                                ifelse(land_use_change$event=="kill_t3",land_use_change$DIA_t3,NA))))))
+
+land_use_change <- land_use_change %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_')) %>% 
+  left_join(plt_list %>% select(KEY, t0), by = c('KEY'))
 #' 
 #' Transform diameter to cm and action year to time step
 #' 
-land_use_change<-land_use_change%>% mutate(TIME_STEP=ACTION_YEAR-2000,
+land_use_change<-land_use_change%>% mutate(TIME_STEP=ACTION_YEAR-t0,
                                            DIA_ACTION= DIA_ACTION*2.54)
 #' 
 #' 
 #' Add the species names
 #' 
 land_use_change<-merge(land_use_change,species_codes, by="SPCD", all.x=T)
+
+land_use_change <- land_use_change %>% filter(!(ACTION == 'plant' & DIA_ACTION >= 12.7))
+land_use_change <- land_use_change %>% filter(DIA_ACTION > 0)
 #' Select variables of interest
 #' 
-land_use_change<-land_use_change%>% select(SUBKEY, STATECD, COUNTYCD,PLOT,SUBP,TREE,TPA_UNADJ, SPCD, Name, ACTION, TIME_STEP, DIA_ACTION)
+#land_use_change<-land_use_change%>% select(SUBKEY, STATECD, COUNTYCD,PLOT,SUBP,TREE,TPA_UNADJ, SPCD, Name, ACTION, TIME_STEP, DIA_ACTION)
+
+
+
+
+land_use_change <- land_use_change %>% rowwise() %>%
+  mutate(AGECLASS = ageClass(ECO_PROVINCE, Name, (DIA_ACTION)),
+         TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
+
+
 #' 
 #'
 #' 
@@ -1285,56 +1300,96 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Assign each tree in a subplot to an age cohort
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
-plt_exist <- plt_list %>% filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
-landGrow <- read.table('all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+outFile <-  file('all_txt/land-use.txt', 'w')
 
-MV_KEY <- data.frame()
-PLOTMAPVALUE <- 1
-outFile = file('all_txt/Initial_Community.txt', 'w')
-cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
-for (i in 1:nrow(plt_exist))
-{
-  #COND_SUB <- WI_COND[i,]
-  #if (COND_SUB$COND_STATUS_CD != 1){next}
-  #PLOT_SUB <- WI_PLOT %>% filter(CN == COND_SUB$PLT_CN)
-  #if (nrow(WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1)) == 0){next}
-  #TREE_SUB <- WI_TREE %>% filter(PLT_CN == COND_SUB$PLT_CN & STATUSCD == 1 & Name %in% unique(landGrow$SPECIES) & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
-  #  select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
-  TREE_SUB <- WI_TREE %>% filter(SUBKEY == plt_exist[i, 'SUBKEY', drop=T])
-  if (nrow(TREE_SUB) == 0){next}
-  TREE_SUB <- TREE_SUB %>% filter(STATUSCD == 1 & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
-    select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
-  if (nrow(TREE_SUB) == 0){next}
-  
-  PLOT_SUB <- WI_PLOT %>% filter(CN == unique(TREE_SUB$PLT_CN))
-  ecoProv <- str_replace(PLOT_SUB$ECO_PROVINCE, ' ', '')
-  TREE_SUB <- TREE_SUB %>% rowwise() %>%
-    mutate(AGECLASS = ageClass(ecoProv, Name, (DIA * 2.54)),
-           TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
-  
-  TREE_SUB <- TREE_SUB %>% filter(AGECLASS < 1000)
-  
-  
-  TREE_GRP <- TREE_SUB %>% group_by(SUBP, Name, AGECLASS) %>%
-    summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
-    mutate(ICSTRING = paste0(' ', AGECLASS, ' (', TREESUM, ')'))
-  
-  
-  TREE_OUT <- TREE_GRP %>% group_by(Name) %>%
-    summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
-  
-  cat(paste('MapCode', PLOTMAPVALUE), file=outFile, sep='\n')
-  cat(TREE_OUT$ICSTRING, file=outFile, sep='\n')
-  cat('\n', file=outFile)
-  
-  out_row <- data.frame(MAPVALUE = PLOTMAPVALUE, PLT_KEY = plt_exist[i, 'SUBKEY', drop=T], ECO_PROVINCE = ecoProv)
-  MV_KEY <- rbind(MV_KEY, out_row)
-  PLOTMAPVALUE <- PLOTMAPVALUE + 1
-  
-  
-}
+
+cat('LandisData   "Land Use"',
+    '',
+    'Timestep    1',
+    'InputMaps	landuse-{timestep}.img',
+    'SiteLog		output/land-use/site-log.csv',
+    '',
+    '>>------------------------------------',
+    '', file = outFile, sep='\n')
+
+luKEY <- tibble()
+luMapCode <- 1
+for (ts in unique(land_use_change$TIME_STEP)[order(unique(land_use_change$TIME_STEP))])
+  {
+    land_use_sub <- land_use_change %>% filter(TIME_STEP == ts)     
+    sbkey <- unique(land_use_sub$SUBKEY)
+    
+    for (subplt in sbkey)
+    {
+      lnd_use <- land_use_sub %>% filter(SUBKEY == subplt)
+      ecoProv <- WI_PLOT %>% filter(KEY == unique(lnd_use$KEY)) %>% 
+        select(ECO_PROVINCE) %>% unique()
+      ecoProv <- ecoProv[[1]]
+      lnd_use <- lnd_use %>% mutate(ecoProv = ecoProv)
+      
+      lnd_use <- lnd_use %>% rowwise() %>%
+        mutate(AGECLASS = ageClass(ecoProv, Name, DIA_ACTION),
+               TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
+      
+      lnd_remove <- lnd_use %>% filter(ACTION == 'remove') %>% 
+        group_by(Name, AGECLASS) %>% summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
+        mutate(ICSTRING = paste0(' ', AGECLASS, ' (', TREESUM, ')'))
+      
+      lnd_plant <- lnd_use %>% filter(ACTION == 'plant') %>%
+        mutate(AGECLASS = 1) %>% 
+        group_by(Name, AGECLASS) %>% summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
+        mutate(ICSTRING = paste0(' ', Name, ' (', TREESUM, ')'))
+      
+      cat(paste0('LandUse  "LandUse', luMapCode, '"'), file = outFile, sep='\n')
+      cat(paste0('MapCode  ', luMapCode), file = outFile, sep='\n')
+      cat('AllowHarvest?    yes', file = outFile, sep='\n')
+      cat('LandCoverChange RemoveDensity', file = outFile, sep='\n')
+      if (nrow(lnd_remove > 0))
+      {
+        remove_OUT <- lnd_remove %>% group_by(Name) %>%
+          summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
+        cat(remove_OUT$ICSTRING, file = outFile, sep='\n')
+
+      }
+      if (nrow(lnd_plant > 0))
+      {
+        cat('Plant', lnd_plant$ICSTRING, file=outFile, sep='\t')
+        cat('', file=outFile, sep='\n')
+      }
+      
+      cat('', '>>------------------------------------', file = outFile, sep='\n')
+      
+      luKEY <- bind_rows(luKEY, tibble(SUBKEY = subplt, LUMAPCODE = luMapCode, TIMESTEP = ts))
+      luMapCode <- luMapCode + 1
+    }
+  }
+
 close(outFile)
-write_csv(MV_KEY, 'output/MAPVALUE_KEY.csv')
+write_csv(luKEY, 'data/landuse_key.csv')
+
+#'
+#' Create land-use maps
+#' 
+
+MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
+
+mapKey <- luKEY %>% left_join(MV_KEY, by = c('SUBKEY'))
+
+#Create Land Use maps ----
+#' Loop through individual time-steps to create maps
+#' 
+
+lu_map <- raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty map
+
+for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
+{
+  sub_lu <- mapKey %>% filter(TIMESTEP == ts)
+  sub_map <- lu_map 
+  sub_map[sub_lu$MAPVALUE] <- sub_lu$LUMAPCODE
+  
+  writeRaster(ecoregion_map, paste0("all_txt/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
+}
+
 #' 
 #'
 #'
