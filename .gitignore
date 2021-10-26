@@ -14,8 +14,8 @@ _book
 *.Rproj.user
 *.Rhistory
 *.Ruserdata
-*data/
+data
 .Rproj.user
-*main_WI_2020/
-*all_txt/outputs/
+main_WI_2020
+all_txt/outputs
 .RData
