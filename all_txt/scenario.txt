@@ -23,7 +23,7 @@ CellLength	12.97
 
 >> Disturbance Extensions	Initialization File
 >> --------------------	-------------------
->>   "Land Use Change"	"land-use.txt"
+   "Land Use Change"	"land-use.txt"
 
 
 >> Output Extensions	Initialization File

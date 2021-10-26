@@ -1077,17 +1077,15 @@ subsec.quant.pred = subsec.quant %>%
   imap(~ predict(.x, data.frame(ALSTK=100), tau=qs))
 #'
 
-growingSpace = function(df)
+growingSpace = function(maxBA)
 {
-  classNum = length(names(df))
-  ecoSection = names(df)
-  predDF = data.frame(maxBA = subsec.quant.pred[[ecoSection]])
+  predDF = data.frame(maxBA = maxBA)
   predGS = predict(baModel, data.frame(maxBA = predDF))
-  df %>% mutate(MAXGS = predGS[df$BIOCLASS])
+  return(predGS)
 }
 
-current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE, .add=T) %>% group_split() %>% 
-  map_dfr(growingSpace)
+subsec.quant.pred <- tibble(ECO_PROVINCE = names(subsec.quant.pred), maxBA = unlist(subsec.quant.pred))
+subsec.quant.pred <- subsec.quant.pred  %>% rowwise() %>% mutate(MAXGS = growingSpace(maxBA))
 
 #' ##################################################################################
 # 14. Create table: Land use ----
@@ -1236,7 +1234,7 @@ land_use_change<-land_use_change%>% mutate(TIME_STEP=ACTION_YEAR-t0,
 land_use_change<-merge(land_use_change,species_codes, by="SPCD", all.x=T)
 
 land_use_change <- land_use_change %>% filter(!(ACTION == 'plant' & DIA_ACTION >= 12.7))
-land_use_change <- land_use_change %>% filter(DIA_ACTION > 0)
+land_use_change <- land_use_change %>% filter(DIA_ACTION > 0) %>% filter(SPCD != 299)
 #' Select variables of interest
 #' 
 #land_use_change<-land_use_change%>% select(SUBKEY, STATECD, COUNTYCD,PLOT,SUBP,TREE,TPA_UNADJ, SPCD, Name, ACTION, TIME_STEP, DIA_ACTION)
@@ -1303,7 +1301,14 @@ cat('LandisData   "Land Use"',
     'SiteLog		output/land-use/site-log.csv',
     '',
     '>>------------------------------------',
-    '', file = outFile, sep='\n')
+    '',
+    'LandUse          forest',
+    '>>------------------------------------',
+      'MapCode          0', 
+    'AllowHarvest?    yes', 
+    'LandCoverChange  NoChange',
+    '',
+    file = outFile, sep='\n')
 
 luKEY <- tibble()
 luMapCode <- 1
@@ -1379,6 +1384,11 @@ mapKey <- luKEY %>% left_join(MV_KEY, by = c('SUBKEY'))
 #' 
 
 lu_map <- raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty map
+
+for (ts in 0:20)
+{
+  writeRaster(lu_map, paste0("all_txt/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
+}
 
 for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
 {

@@ -6,6 +6,12 @@ SiteLog		output/land-use/site-log.csv
 
 >>------------------------------------
 
+LandUse          forest
+>>------------------------------------
+MapCode          0
+AllowHarvest?    yes
+LandCoverChange  NoChange
+
 LandUse  "LandUse1"
 MapCode  1
 AllowHarvest?    yes
@@ -21817,7 +21823,7 @@ MapCode  2799
 AllowHarvest?    yes
 LandCoverChange RemoveDensity
 acersacc  10 (0)
-Plant	 larilari (26)	 NA (13)
+Plant	 larilari (26)
 
 >>------------------------------------
 LandUse  "LandUse2800"
