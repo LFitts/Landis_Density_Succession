@@ -759,7 +759,7 @@ siteSize = 169
 #' Subset for ONE county (COUNTYCD =1) and just keep records from cycle 8
 #' and select variables of interest
 #'
-WI_COND<- WI_COND %>% #WHY CYCLE 8????
+WI_COND<- WI_COND %>%
   select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, COND_STATUS_CD, CONDID, DSTRBCD1, DSTRBCD2, DSTRBCD3) %>%
   mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
 #  mutate(MAPCODE = 1:nrow(.))
@@ -830,7 +830,7 @@ for (i in 1:nrow(plt_exist))
     select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
   if (nrow(TREE_SUB) == 0){next}
   
-  PLOT_SUB <- WI_PLOT %>% filter(CN == unique(TREE_SUB$PLT_CN))
+  PLOT_SUB <- WI_PLOT %>% filter(PLT_CN == unique(TREE_SUB$PLT_CN))
   ecoProv <- str_replace(PLOT_SUB$ECO_PROVINCE, ' ', '')
   TREE_SUB <- TREE_SUB %>% rowwise() %>%
     mutate(AGECLASS = ageClass(ecoProv, Name, (DIA * 2.54)),
@@ -859,11 +859,6 @@ for (i in 1:nrow(plt_exist))
 }
 close(outFile)
 write_csv(MV_KEY, 'output/MAPVALUE_KEY.csv')
-#' 
-#' Now write the Initial communities text file:
-#' 
-#writeLines(c(paste("LandisData", "\"Initial Communities\"", sep="\t"),"\n"), con = "LANDIS_work/all_txt/initial-communities.txt") #creates the independent lines of text
-#write.table(establishment_probability, "LANDIS_work/all_txt/establishment_probability.txt", row.names=F, append=TRUE, quote = FALSE) #rownames=F to prevent the indexing column to be created. quote=F prevents quotes surrounding character strings
 #' 
 #' 
 #' ##################################################################################
@@ -1103,12 +1098,12 @@ current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE,
 #' 
 #' Read in the data for Wisconsin (run from the first section of the code)
 #' 
-WI_COND<-read_csv("data/main_WI_2020/WI_COND.csv")#read the condition table
-WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_COND<-read.csv("data/main_WI_2020/WI_COND.csv")#read the condition table
+WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
 #fiaDir <- 'D:/fia/rFIA'
 #wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("TREE"), inMemory = T, nCores = 3)
 
-WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
 WI_TREE <- WI_TREE %>% filter(INVYR >= 2000)
 #
 WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
@@ -1180,6 +1175,7 @@ tree_long<-merge(WI_TREE, plt_codes, by=c("SUBKEY","INVYR"), all.x=T)%>%
 #'
 #' Create a column for if the tree was killed or not
 tree_long$AGENTCD[is.na(tree_long$AGENTCD)] <- 0 #fill NA's with zeros
+tree_long$AGENTCD<-ifelse(tree_long$AGENTCD==60 | tree_long$AGENTCD==70,0,tree_long$AGENTCD) #replace the agent code vegetation and other for not disturbed. The logic here is that LANDIS should remove those trees with self thinning and the background mortality incorporated in the model
 #'  
 #' 
 tree_wide <- tree_long %>%
@@ -1241,31 +1237,25 @@ land_use_change <- land_use_change %>% filter(DIA_ACTION > 0)
 #' Select variables of interest
 #' 
 #land_use_change<-land_use_change%>% select(SUBKEY, STATECD, COUNTYCD,PLOT,SUBP,TREE,TPA_UNADJ, SPCD, Name, ACTION, TIME_STEP, DIA_ACTION)
-
-
-
-
-land_use_change <- land_use_change %>% rowwise() %>%
-  mutate(AGECLASS = ageClass(ECO_PROVINCE, Name, (DIA_ACTION)),
-         TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
-
-
-#' 
 #'
-#' 
-#' ########################### THIS IS FROM THE INITIAL COMMUNITIES CODE, HAVEN'T CHANGED IT YET
+#'NOT NEEDED ##
+#land_use_change <- land_use_change %>% rowwise() %>%
+#  mutate(AGECLASS = ageClass(ECO_PROVINCE, Name, (DIA_ACTION)),
+#         TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
+
+#' ###########################
 #' Select variables of interest
 #'
 WI_PLOT <- WI_PLOT %>%  dplyr::select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, ECOSUBCD) %>%
   mutate(ECO_PROVINCE = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
          KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))
 
-
-WI_TREE<- WI_TREE %>% 
-  select(TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
-         DIA, AGENTCD, MORTYR, STANDING_DEAD_CD, 
-         TPA_UNADJ, SUBKEY) %>%
-  left_join(., ref, by = 'SPCD')
+#NOT NEEDED##
+#WI_TREE<- WI_TREE %>% 
+#  select(TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
+#         DIA, AGENTCD, MORTYR, STANDING_DEAD_CD, 
+#         TPA_UNADJ, SUBKEY) %>%
+#  left_join(., ref, by = 'SPCD')
 #'
 #' Function to convert species and diameter to age cohort
 #' 
@@ -1281,7 +1271,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('LANDIS_work/all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
   {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -1371,8 +1361,10 @@ write_csv(luKEY, 'data/landuse_key.csv')
 #' Create land-use maps
 #' 
 
-MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
-
+#MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
+p<-str_split(MV_KEY$PLT_KEY, '_', simplify=T)
+MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
+#'
 mapKey <- luKEY %>% left_join(MV_KEY, by = c('SUBKEY'))
 
 #Create Land Use maps ----
@@ -1387,13 +1379,10 @@ for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
   sub_map <- lu_map 
   sub_map[sub_lu$MAPVALUE] <- sub_lu$LUMAPCODE
   
-  writeRaster(ecoregion_map, paste0("all_txt/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
+  writeRaster(lu_map, paste0("all_txt/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
 }
 
 #' 
-#'
-#'
-#'
 #' ##################################################################################
 # 15. Create table: Ecoregion parameter density (ready)----
 #'###################################################################################
