@@ -1098,12 +1098,12 @@ current.MGSO =  test %>% filter(CLIMATE == 'CURRENT') %>% group_by(SUB, CLIMATE,
 #' 
 #' Read in the data for Wisconsin (run from the first section of the code)
 #' 
-WI_COND<-read.csv("data/main_WI_2020/WI_COND.csv")#read the condition table
-WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_COND<-read_csv("data/main_WI_2020/WI_COND.csv")#read the condition table
+WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
 #fiaDir <- 'D:/fia/rFIA'
 #wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("TREE"), inMemory = T, nCores = 3)
 
-WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
 WI_TREE <- WI_TREE %>% filter(INVYR >= 2000)
 #
 WI_COND <- WI_COND %>% mutate(PLT_CN = as.character(PLT_CN))
@@ -1142,8 +1142,11 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 
 #' 
 #'
-plt_list <- read_csv('data/WI_PLOT_LIST_updated.CSV')
-plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))
+plt_list <- read_csv('code/WI_PLOT_FILTERED.csv')
+plt_list <- plt_list %>% 
+  mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_')) %>%
+  filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
+
 #'
 #'
 WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
@@ -1340,7 +1343,10 @@ for (ts in unique(land_use_change$TIME_STEP)[order(unique(land_use_change$TIME_S
           summarise(ICSTRING = paste(unique(Name), paste0(unique(ICSTRING) , collapse = ''), collapse = ''), .groups='drop')
         cat(remove_OUT$ICSTRING, file = outFile, sep='\n')
 
+      } else{
+        cat('acersacc  10 (0)', file = outFile, sep='\n')
       }
+      
       if (nrow(lnd_plant > 0))
       {
         cat('Plant', lnd_plant$ICSTRING, file=outFile, sep='\t')
@@ -1360,10 +1366,11 @@ write_csv(luKEY, 'data/landuse_key.csv')
 #'
 #' Create land-use maps
 #' 
-
-#MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
-p<-str_split(MV_KEY$PLT_KEY, '_', simplify=T)
-MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
+MV_KEY <- read_csv('output/MAPVALUE_KEY.csv')
+MV_KEY <- MV_KEY %>% rowwise() %>% mutate(KEY = paste(str_split(PLT_KEY, '_', simplify=T)[,1:3], collapse='_'))
+MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
+#p<-str_split(MV_KEY$PLT_KEY, '_', simplify=T)
+#MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
 #'
 mapKey <- luKEY %>% left_join(MV_KEY, by = c('SUBKEY'))
 
