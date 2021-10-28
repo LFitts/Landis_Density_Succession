@@ -245,6 +245,29 @@ plt_list_s3 <- plt_list %>%
 plt_list<-rbind(plt_list_s1,plt_list_s2, plt_list_s3)
 #'
 WI_TREE<-WI_TREE2
+
+#' Rename the species codes
+WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
+                     ifelse(WI_TREE$SPCD ==975|WI_TREE$SPCD ==317|WI_TREE$SPCD ==977|WI_TREE$SPCD ==974,972,
+                            ifelse(WI_TREE$SPCD ==602|WI_TREE$SPCD ==601|WI_TREE$SPCD ==600,402,
+                                   ifelse(WI_TREE$SPCD ==741|WI_TREE$SPCD ==742|WI_TREE$SPCD ==752,746,
+                                          ifelse(WI_TREE$SPCD ==130|WI_TREE$SPCD ==136,125,
+                                                 ifelse(WI_TREE$SPCD ==804,802,
+                                                        ifelse(WI_TREE$SPCD ==91|WI_TREE$SPCD ==96,94,
+                                                               ifelse(WI_TREE$SPCD ==314|WI_TREE$SPCD ==320,318,
+                                                                      ifelse(WI_TREE$SPCD ==826,823,
+                                                                             ifelse(WI_TREE$SPCD ==70,71,
+                                                                                    ifelse(WI_TREE$SPCD ==546,544,
+                                                                                           ifelse(WI_TREE$SPCD ==10|WI_TREE$SPCD ==15,12,
+                                                                                                  ifelse(WI_TREE$SPCD == 830,809,
+                                                                                                         ifelse(WI_TREE$SPCD %in% vec99991,99991,
+                                                                                                                ifelse(WI_TREE$SPCD %in% vec99992,99992,
+                                                                                                                       ifelse(WI_TREE$SPCD %in% vec99993,99993,
+                                                                                                                              ifelse(WI_TREE$SPCD %in% vec99994,99994,
+                                                                                                                                     ifelse(WI_TREE$SPCD %in% vec99995,99995,
+                                                                                                                                            ifelse(WI_TREE$SPCD %in% vec99996,99996,WI_TREE$SPCD)))))))))))))))))))
+
+
 WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
   filter(SUBKEY %in% unique(plt_list$SUBKEY))
 #"
@@ -508,7 +531,6 @@ res(ecoregion_map) #check resolution
 ncell(ecoregion_map) #check number of cells
 #'
 MV_KEY <- MV_KEY %>% 
-  left_join(WI_PLOT %>% dplyr::select(KEY, ECO_PROVINCE), by = c('KEY', 'ECO_PROVINCE'))%>%  
   left_join(eco_codes, by='ECO_PROVINCE')
 
   #
