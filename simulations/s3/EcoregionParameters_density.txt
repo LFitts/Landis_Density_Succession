@@ -1,0 +1,16 @@
+LandisData	EcoregionParameters
+
+
+EcoregionParameters ClimateFileName Latitude
+212H climate.txt 45
+212J climate.txt 45
+212K climate.txt 45
+212Q climate.txt 45
+212T climate.txt 45
+212X climate.txt 45
+212Y climate.txt 45
+212Z climate.txt 45
+222K climate.txt 45
+222L climate.txt 45
+222M climate.txt 45
+222R climate.txt 45
