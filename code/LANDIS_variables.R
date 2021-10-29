@@ -1083,17 +1083,15 @@ ggsave(file="figures/BA_MGS_FIA.tiff", plot = FIA_mgs_plot, width=600, height=45
 #' Quantile regression stocking and basal area
 qs = c(0.95)
 #'
-subsec.quant = wiBA %>% #not sure what is happening from here onward???????
-  split(.$ECO_PROVINCE) %>%
-  map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
-
-subsec.quant = wiBA %>% #not sure what is happening from here onward???????
-  split(.$ECO_PROVINCE) %>%
-  map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
-
 #subsec.quant = wiBA %>% #not sure what is happening from here onward???????
 #  split(.$ECO_PROVINCE) %>%
-#  map(~ rq(BAA ~ ALSTK, data=.x, tau=qs))
+#  map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
+
+
+
+subsec.quant = wiBA %>% #not sure what is happening from here onward???????
+  split(.$ECO_PROVINCE) %>%
+  map(~ rq(BAA ~ ALSTK, data=.x, tau=qs))
 #'
 subsec.quant.pred = subsec.quant %>% 
   imap(~ predict(.x, data.frame(ALSTK=1:120), tau=qs))
