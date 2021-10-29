@@ -1039,11 +1039,21 @@ ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName
 #facet_grid(. ~ MGS)
 #'
 ggsave(file="figures/BA_MGS_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+
+#' Load gso_comp file
+#' 
+load('code/gso_comp.RData')
 #'
 #' LANDIS basal area model
-landisBA = gso_comp %>% group_by(MGS) %>% summarise(maxBA = max(MEANBA)) # get the max mean basal area per maximum growing space
+landisBA = gso_comp %>% group_by(EcoName, MGS) %>% summarise(maxBA = max(P95)) %>% mutate(MGS = as.numeric(as.character(MGS))) # get the max mean basal area per maximum growing space
 #'
 baModel = lm(MGS ~ maxBA, data=landisBA)
+
+baModel <- landisBA %>%
+  group_by(EcoName) %>%
+  group_map(~ broom::tidy(lm(MGS ~ maxBA, data = .x)))
+
+baModel <- landisBA %>% do(model = lm(MGS ~ maxBA, data = .))
 
 load('code/baModel.RData')
 #'
@@ -1051,6 +1061,10 @@ load('code/baModel.RData')
 #' 
 wiBA <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTK'), byPlot = T)
 wiBA <- wiBA %>% filter(PLOT_STATUS_CD == 1)
+
+ggplot(wiBA, aes(x=ECO_PROVINCE, y=BAA, fill=ECO_PROVINCE)) +
+  geom_boxplot()
+
 wiSUMM <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTKCD'), variance = T)
 #'
 #' Get a graph for one ecoregion
@@ -1072,20 +1086,40 @@ qs = c(0.95)
 subsec.quant = wiBA %>% #not sure what is happening from here onward???????
   split(.$ECO_PROVINCE) %>%
   map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
+
+subsec.quant = wiBA %>% #not sure what is happening from here onward???????
+  split(.$ECO_PROVINCE) %>%
+  map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
+
+#subsec.quant = wiBA %>% #not sure what is happening from here onward???????
+#  split(.$ECO_PROVINCE) %>%
+#  map(~ rq(BAA ~ ALSTK, data=.x, tau=qs))
 #'
 subsec.quant.pred = subsec.quant %>% 
-  imap(~ predict(.x, data.frame(ALSTK=100), tau=qs))
+  imap(~ predict(.x, data.frame(ALSTK=1:120), tau=qs))
 #'
 
-growingSpace = function(maxBA)
+predTB <- tibble(melt(subsec.quant.pred)) %>% rename(PRED = value, ECO_PROVINCE = L1) %>% 
+  mutate(ALSTK = rep(1:120, times=11))
+
+ggplot(wiBA, aes(x = ALSTK, y = BAA)) +
+  geom_point() +
+  geom_line(data = predTB, aes(x = ALSTK, y = PRED), size = 1) +
+  facet_wrap(~ECO_PROVINCE)
+
+growingSpace = function(ecoName, maxBA)
 {
   predDF = data.frame(maxBA = maxBA)
-  predGS = predict(baModel, data.frame(maxBA = predDF))
+  predGS = predict(baModel %>% filter(EcoName == ecoName) %>% pluck('model', 1), predDF)
   return(predGS)
 }
 
+#' This should get some updated MaxGS parameters
+#' They range from 0.898 to 1.69, which seems much more reasonable 
+subsec.quant.pred = subsec.quant %>% 
+  imap(~ predict(.x, data.frame(ALSTK=100), tau=qs))
 subsec.quant.pred <- tibble(ECO_PROVINCE = names(subsec.quant.pred), maxBA = unlist(subsec.quant.pred))
-subsec.quant.pred <- subsec.quant.pred  %>% rowwise() %>% mutate(MAXGS = growingSpace(maxBA))
+subsec.quant.pred <- subsec.quant.pred  %>% rowwise() %>% mutate(MAXGS = growingSpace(ECO_PROVINCE, maxBA))
 
 #' ##################################################################################
 # 14. Create table: Land use ----
