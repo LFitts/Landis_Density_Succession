@@ -6,6 +6,7 @@
 library(tidyverse)
 library(data.table)
 library(rFIA)
+library(raster)
 ###################################################################################
 
 # Read in the FIA data for the state of Wisconsin ----
@@ -64,7 +65,7 @@ species_attributes$Name<-paste(species_attributes$name1,species_attributes$name2
 #'
 #' Create a subset of this table just showing the species name and codes (this will be merged with the rest of the tables)
 #' 
-species_codes<-species_attributes%>% select(SPCD, Name)
+species_codes<-species_attributes%>% dplyr::select(SPCD, Name)
 #'
 #' ##################################################################################
 # 1. Create table: Initial communities ----
@@ -109,7 +110,7 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 #' 
 #' Create a subkey that includes time zero for the plt_list
 #'
-#plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
+#plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 4, 4), sep='_'))
 #'
 plt_list_s1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
 plt_list_s2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
@@ -119,9 +120,9 @@ plt_list<-rbind(plt_list_s1,plt_list_s2, plt_list_s3)
 #'
 #'
 #' Create the same subkey for the tree table
-WI_TREE<-WI_TREE2
+#WI_TREE<-WI_TREE2
 WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_')) %>% 
-  filter(SUBKEY %in% unique(plt_list$SUBKEY))
+  dplyr::filter(SUBKEY %in% unique(plt_list$SUBKEY))
 #'
 #' Species codes
 ref<-species_codes
@@ -135,7 +136,7 @@ WI_PLOT <- WI_PLOT %>%  dplyr::select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, EL
 
 
 WI_TREE<- WI_TREE %>% 
-  select(TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
+  dplyr::select(TREE_CN,PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, SUBP, TREE, STATUSCD, SPCD,
          SPGRPCD, DIA, DIAHTCD, HT, ACTUALHT, AGENTCD, DAMAGE_AGENT_CD1, 
          DAMAGE_AGENT_CD2, DAMAGE_AGENT_CD3, MORTYR, STANDING_DEAD_CD, 
          TPA_UNADJ, DRYBIO_BOLE, DRYBIO_TOP, DRYBIO_STUMP, DRYBIO_SAPLING, 
@@ -156,7 +157,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('simulations/s1/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('simulations/s1_s2_s3/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
   {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -174,8 +175,8 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Assign each tree in a subplot to an age cohort
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
-plt_exist <- plt_list %>% filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
-landGrow <- read.table('simulations/s1/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+plt_exist <- plt_list %>% dplyr::filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
+landGrow <- read.table('simulations/s1_s2_s3/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
 #'
 MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
@@ -183,19 +184,19 @@ outFile = file('simulations/s1_s2_s3/Initial_Community.txt', 'w')
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
 for (i in 1:nrow(plt_exist))
 {
-  TREE_SUB <- WI_TREE %>% filter(SUBKEY == plt_exist[i, 'SUBKEY', drop=T])
+  TREE_SUB <- WI_TREE %>% dplyr::filter(SUBKEY == plt_exist[i, 'SUBKEY', drop=T])
   if (nrow(TREE_SUB) == 0){next}
-  TREE_SUB <- TREE_SUB %>% filter(STATUSCD == 1 & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
-    select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
+  TREE_SUB <- TREE_SUB %>% dplyr::filter(STATUSCD == 1 & !(is.na(DIA)) & !(is.na(TPA_UNADJ))) %>% 
+    dplyr::select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
   if (nrow(TREE_SUB) == 0){next}
 #'  
-  PLOT_SUB <- WI_PLOT %>% filter(PLT_CN == unique(TREE_SUB$PLT_CN))
+  PLOT_SUB <- WI_PLOT %>% dplyr::filter(PLT_CN == unique(TREE_SUB$PLT_CN))
   ecoProv <- str_replace(PLOT_SUB$ECO_PROVINCE, ' ', '')
   TREE_SUB <- TREE_SUB %>% rowwise() %>%
     mutate(AGECLASS = ageClass(ecoProv, Name, (DIA * 2.54)),
            TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
 #'  
-  TREE_SUB <- TREE_SUB %>% filter(AGECLASS < 1000)
+  TREE_SUB <- TREE_SUB %>% dplyr::filter(AGECLASS < 1000)
 #'  
 #'  
   TREE_GRP <- TREE_SUB %>% group_by(SUBP, Name, AGECLASS) %>%
@@ -219,9 +220,57 @@ for (i in 1:nrow(plt_exist))
 close(outFile)
 write_csv(MV_KEY, 'simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
 #' 
+#' ##################################################################################
+# 2. Maps: Subplots with ecoregions ----
+#'################################################################################### 
+#'
+MV_KEY<-read.csv('simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
+#' Merge the plot list database with the ecological province variable:
+#'
+WI_PLOT$ECO_PROVINCE<-substr(WI_PLOT$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blank space at the beginning of the ECOSUBCD column from the FIA database
+#' 
+WI_PLOT_COORD<-merge(WI_PLOT, plt_list, by.x=c("STATECD", "COUNTYCD", "PLOT", "INVYR"), by.y=c("STATECD", "COUNTYCD", "PLOT", "t0"))
+#' 
+#' Select variables of interest
+WI_PLOT_COORD<-WI_PLOT_COORD%>% dplyr::select(STATECD, COUNTYCD, PLOT, INVYR, PLT_CN, ECO_PROVINCE)
+#' 
+#' Get a sequence of "map codes" for distinct ecoregions
+#' 
+eco_codes<-as.data.frame(unique(WI_PLOT$ECO_PROVINCE)) 
+names(eco_codes)<-"ECO_PROVINCE"
+eco_codes <- eco_codes %>% arrange(ECO_PROVINCE) %>% mutate(Map_code_ecoregion = 1:nrow(eco_codes))
+
+#' 
+WI_PLOT_COORD<-merge(WI_PLOT_COORD,eco_codes, by="ECO_PROVINCE")
+WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
+#'
+#install.packages("raster")
+#library(raster)
+#'
+#initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up later
+#initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=100, nrow=100, xmn=0,xmx=1297,ymn=0,ymx=1297,vals=0) #s1_s2..create empty ecoregion, initial communities and a subplot id raster to fill up later
+initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=117, nrow=117, xmn=0,xmx=1517.49,ymn=0,ymx=1517.49,vals=0) #s1_s2_s3..create empty ecoregion, initial communities and a subplot id raster to fill up later
+res(ecoregion_map) #check resolution
+ncell(ecoregion_map) #check number of cells
+#'
+MV_KEY <- MV_KEY %>% 
+  left_join(eco_codes, by='ECO_PROVINCE')
+
+#
+initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
+#
+ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
+#
+#' Save the files
+writeRaster(ecoregion_map, "simulations/s1_s2_s3/ecoregion.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+#'
+#plot(ecoregion_map)
+#'
+writeRaster(initial_communities_map, "simulations/s1_s2_s3/initialcommunity.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+
 #'
 #' ##################################################################################
-# 2. Create table: Land use ----
+# 3. Create table: Land use ----
 #'###################################################################################
 #' Read in initial communities key
 MV_KEY<-read.csv('simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
@@ -229,22 +278,25 @@ MV_KEY <- MV_KEY %>% rowwise() %>% mutate(KEY = paste(str_split(PLT_KEY, '_', si
 MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
 #'
 plt_list <- read.csv('code/WI_PLOT_FILTERED.csv')
+#plt_list<- plt_list %>% 
+#    mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 4, 4), sep='_')) %>% #Change the subplot list subplot for every run
+#  dplyr::filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
 #'
 plt_list_s1 <- plt_list %>% 
   mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_')) %>% #Change the subplot list subplot for every run
-  filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
+  dplyr::filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
 #'
 plt_list_s2 <- plt_list %>% 
   mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_')) %>% #Change the subplot list subplot for every run
-  filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
+  dplyr::filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
 #'
 plt_list_s3 <- plt_list %>% 
   mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 3, 3), sep='_')) %>% #Change the subplot list subplot for every run
-  filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
+  dplyr::filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
 #'
 plt_list<-rbind(plt_list_s1,plt_list_s2, plt_list_s3)
 #'
-WI_TREE<-WI_TREE2
+WI_TREE<-WI_TREE2 #reset the WI_TREE table to the original
 
 #' Rename the species codes
 WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
@@ -269,7 +321,7 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 
 
 WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
-  filter(SUBKEY %in% unique(plt_list$SUBKEY))
+  dplyr::filter(SUBKEY %in% unique(plt_list$SUBKEY))
 #"
 ref<-species_codes
 #Area of site (raster cell size squared in meters)
@@ -280,12 +332,12 @@ siteSize = 169
 #' Creating a change database
 #' 
 #' Put the tree table into a wide format
-plt_codes<-plt_list %>% select(SUBKEY,t0,t1,t2,t3)%>%
+plt_codes<-plt_list %>% dplyr::select(SUBKEY,t0,t1,t2,t3)%>%
   pivot_longer(t0:t3, names_to="Time", values_to="INVYR")%>%
-  filter(INVYR!=0)
+  dplyr::filter(INVYR!=0)
 #' 
 tree_long<-merge(WI_TREE, plt_codes, by=c("SUBKEY","INVYR"), all.x=T)%>%
-  select(SUBKEY, STATECD, COUNTYCD, PLOT, SUBP, TREE, INVYR, Time, SPCD, DIA, AGENTCD, STATUSCD, TPA_UNADJ)
+  dplyr::select(SUBKEY, STATECD, COUNTYCD, PLOT, SUBP, TREE, INVYR, Time, SPCD, DIA, AGENTCD, STATUSCD, TPA_UNADJ)
 #'
 #' Create a column for if the tree was killed or not
 tree_long$AGENTCD[is.na(tree_long$AGENTCD)] <- 0 #fill NA's with zeros
@@ -310,10 +362,10 @@ land_use$event<-ifelse(land_use$DIA_t0==0 & land_use$DIA_t1!=0,"plant_t1",
 #'
 #' Filter out trees that started dead at t0
 #' 
-land_use<-land_use%>% filter(STATUSCD_t0!=2) #HOW ABOUT STATUSCD 3 (CUT/REMOVED BY HUMAN)
+land_use<-land_use%>% dplyr::filter(STATUSCD_t0!=2) #HOW ABOUT STATUSCD 3 (CUT/REMOVED BY HUMAN)
 #' 
 #' Filter out trees with no change
-land_use_change<-land_use %>% filter(event!="no_change")
+land_use_change<-land_use %>% dplyr::filter(event!="no_change")
 #' 
 #' Now create a column for action, action year, and diameter at the action time to reflect plant/kill, the year when to do so, and the diameter of the tree to plant or remove
 land_use_change$ACTION_YEAR<-ifelse(land_use_change$event=="plant_t1",land_use_change$INVYR_t1,
@@ -334,7 +386,7 @@ land_use_change$DIA_ACTION<-ifelse(land_use_change$event=="plant_t1",land_use_ch
                                                                ifelse(land_use_change$event=="kill_t3",land_use_change$DIA_t3,NA))))))
 
 land_use_change <- land_use_change %>% mutate(KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_')) %>% 
-  left_join(plt_list %>% select(KEY, t0), by = c('KEY'))
+  left_join(plt_list %>% dplyr::select(KEY, t0), by = c('KEY'))
 #' 
 #' Transform diameter to cm and action year to time step
 #' 
@@ -346,8 +398,8 @@ land_use_change<-land_use_change%>% mutate(TIME_STEP=ACTION_YEAR-t0,
 #' 
 land_use_change<-merge(land_use_change,species_codes, by="SPCD", all.x=T)
 
-land_use_change <- land_use_change %>% filter(!(ACTION == 'plant' & DIA_ACTION >= 12.7))
-land_use_change <- land_use_change %>% filter(DIA_ACTION > 0) %>% filter(SPCD != 299)
+land_use_change <- land_use_change %>% dplyr::filter(!(ACTION == 'plant' & DIA_ACTION >= 12.7))
+land_use_change <- land_use_change %>% dplyr::filter(DIA_ACTION > 0) %>% dplyr::filter(SPCD != 299)
 #
 #' ###########################
 #' Select variables of interest
@@ -370,7 +422,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('simulatios/s1/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('simulatios/s1_s2_s3/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
   {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -411,14 +463,14 @@ luKEY <- tibble()
 luMapCode <- 1
 for (ts in unique(land_use_change$TIME_STEP)[order(unique(land_use_change$TIME_STEP))])
 {
-  land_use_sub <- land_use_change %>% filter(TIME_STEP == ts)     
+  land_use_sub <- land_use_change %>% dplyr::filter(TIME_STEP == ts)     
   sbkey <- unique(land_use_sub$SUBKEY)
   
   for (subplt in sbkey)
   {
-    lnd_use <- land_use_sub %>% filter(SUBKEY == subplt)
-    ecoProv <- WI_PLOT %>% filter(KEY == unique(lnd_use$KEY)) %>% 
-      select(ECO_PROVINCE) %>% unique()
+    lnd_use <- land_use_sub %>% dplyr::filter(SUBKEY == subplt)
+    ecoProv <- WI_PLOT %>% dplyr::filter(KEY == unique(lnd_use$KEY)) %>% 
+      dplyr::select(ECO_PROVINCE) %>% unique()
     ecoProv <- ecoProv[[1]]
     lnd_use <- lnd_use %>% mutate(ecoProv = ecoProv)
     
@@ -426,11 +478,11 @@ for (ts in unique(land_use_change$TIME_STEP)[order(unique(land_use_change$TIME_S
       mutate(AGECLASS = ageClass(ecoProv, Name, DIA_ACTION),
              TREENUM = round((TPA_UNADJ * 4 / 4046.86) * siteSize))
     
-    lnd_remove <- lnd_use %>% filter(ACTION == 'remove') %>% 
+    lnd_remove <- lnd_use %>% dplyr::filter(ACTION == 'remove') %>% 
       group_by(Name, AGECLASS) %>% summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
       mutate(ICSTRING = paste0(' ', AGECLASS, ' (', TREESUM, ')'))
     
-    lnd_plant <- lnd_use %>% filter(ACTION == 'plant') %>%
+    lnd_plant <- lnd_use %>% dplyr::filter(ACTION == 'plant') %>%
       mutate(AGECLASS = 1) %>% 
       group_by(Name, AGECLASS) %>% summarise(TREESUM = sum(TREENUM, na.rm=T), .groups='drop') %>%
       mutate(ICSTRING = paste0(' ', Name, ' (', TREESUM, ')'))
@@ -473,7 +525,7 @@ MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', sim
 #'
 mapKey <- luKEY %>% left_join(MV_KEY, by = c('SUBKEY'))
 #"
-# 3. Create Land Use maps ----
+# 4. Create Land Use maps ----
 #' 
 library(raster)
 #' 
@@ -490,7 +542,7 @@ for (ts in 0:20)
 
 for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
 {
-  sub_lu <- mapKey %>% filter(TIMESTEP == ts)
+  sub_lu <- mapKey %>% dplyr::filter(TIMESTEP == ts)
   sub_map <- lu_map 
   sub_map[sub_lu$MAPVALUE] <- sub_lu$LUMAPCODE
   
@@ -498,49 +550,3 @@ for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
 }
 
 #
-#' ##################################################################################
-# 4. Maps: Subplots with ecoregions ----
-#'################################################################################### 
-#'
-#' Merge the plot list database with the ecological province variable:
-#'
-WI_PLOT$ECO_PROVINCE<-substr(WI_PLOT$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blank space at the beginning of the ECOSUBCD column from the FIA database
-#' 
-WI_PLOT_COORD<-merge(WI_PLOT, plt_list, by.x=c("STATECD", "COUNTYCD", "PLOT", "INVYR"), by.y=c("STATECD", "COUNTYCD", "PLOT", "t0"))
-#' 
-#' Select variables of interest
-WI_PLOT_COORD<-WI_PLOT_COORD%>% dplyr::select(STATECD, COUNTYCD, PLOT, INVYR, PLT_CN, ECO_PROVINCE)
-#' 
-#' Get a sequence of "map codes" for distinct ecoregions
-#' 
-eco_codes<-as.data.frame(unique(WI_PLOT$ECO_PROVINCE)) 
-names(eco_codes)<-"ECO_PROVINCE"
-eco_codes <- eco_codes %>% arrange(ECO_PROVINCE) %>% mutate(Map_code_ecoregion = 1:nrow(eco_codes))
-
-#' 
-WI_PLOT_COORD<-merge(WI_PLOT_COORD,eco_codes, by="ECO_PROVINCE")
-WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
-#'
-#install.packages("raster")
-#library(raster)
-#'
-#initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up later
-#initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=100, nrow=100, xmn=0,xmx=1297,ymn=0,ymx=1297,vals=0) #s1_s2..create empty ecoregion, initial communities and a subplot id raster to fill up later
-initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=117, nrow=117, xmn=0,xmx=1517.49,ymn=0,ymx=1517.49,vals=0) #s1_s2_s3..create empty ecoregion, initial communities and a subplot id raster to fill up later
-res(ecoregion_map) #check resolution
-ncell(ecoregion_map) #check number of cells
-#'
-MV_KEY <- MV_KEY %>% 
-  left_join(eco_codes, by='ECO_PROVINCE')
-
-  #
-initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
-#
-ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
-#
-#' Save the files
-writeRaster(ecoregion_map, "simulations/s1_s2_s3/ecoregion.img", NAflag=-9999, overwrite=T, datatype='INT2S')
-#'
-plot(ecoregion_map)
-#'
-writeRaster(initial_communities_map, "simulations/s1_s2_s3/initialcommunity.img", NAflag=-9999, overwrite=T, datatype='INT2S')
