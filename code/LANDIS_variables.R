@@ -1007,12 +1007,14 @@ library(quantreg)
 #' I would recommend putting the MaxGSO value at the end of the file name
 #' Example = Density_cohort_log_MGS10.csv for the current MaxGSO of 1.0
 #' 
-fllst <- list.files(path = 'all_txt/', pattern = 'Density_cohort_log_') #Read in the files uploaded from LANDIS runs
+#fllst <- list.files(path = 'all_txt/', pattern = 'Density_cohort_log_') #Read in the files uploaded from LANDIS runs
+fllst <- list.files(path = 'simulations/s1/', pattern = 'Density_cohort_log_') #Read in the files uploaded from LANDIS runs
+#
 #
 gso_comp <- tibble()
 #
 for (i in fllst){
-  cohort_log <- read_csv(paste0('all_txt/', i))
+  cohort_log <- read_csv(paste0('simulations/s1/', i))
   # mgs <- sprintf("%0.1f", as.integer(str_split(str_replace(i, '[.]csv', ''), '_', simplify = T)[,4]) / 10) #something is producing an NA value here
   mgs<-str_split(str_replace(i, '[.]csv', ''), '_', simplify = T)[,4] #obtain the 4th column of the string in the file's name (MGS100)
   mgs<-(as.integer(str_extract(mgs, "[0-9]+")))/100 #extract numbers from string and divide them by 100 to represent the units of the maximum growing space
@@ -1020,29 +1022,40 @@ for (i in fllst){
   ba_summ <- cohort_log %>% group_by(Time, EcoName, SiteIndex) %>% 
     summarise(BASALAREA = sum((Diameter / 2.54)^2 * 0.005454154 / 0.0415)) %>% 
     group_by(EcoName, Time) %>% 
-    summarise(MEANBA = mean(BASALAREA)) %>% 
+    summarise(MEANBA = mean(BASALAREA),
+              P95=quantile(BASALAREA, 0.95)) %>% 
     mutate(MGS = as.numeric(mgs))
   #'  
   gso_comp <- bind_rows(gso_comp, ba_summ)
   #"  
-  plot_ba<-ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
-    geom_line() +
-    geom_point()
+#  plot_ba<-ggplot(ba_summ, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
+#    geom_line() +
+#    geom_point()
   #  ggsave(file=paste("figures/BA_MGS_LANDIS",mgs,".tiff", sep=""), plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 }
 #' Create a plot visualizing the results for the different maximum growing spaces run
-par(mfrow=c(3,3))
-ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=EcoName, color=EcoName)) +
+par(mfrow=c(4,3))
+ba_mgs_plot<-ggplot(gso_comp, aes(x=Time, y=MEANBA, group=MGS, color=as.factor(MGS))) +
   geom_line() +
   geom_point()+
-  facet_wrap(~MGS)
-#facet_grid(. ~ MGS)
+  facet_wrap(~EcoName)+
+  theme_bw()+
+ # scale_fill_manual(values=c("orange3", "royalblue4", "tan4","olivedrab4", "red4"))+
+  theme(axis.text=element_text(size=36, color="black"),axis.title=element_text(size=38,face="bold"), legend.text=element_text(size=36), legend.title=element_text(size=38),legend.position="right")+
+  xlab("Time (years)")+
+  ylab(bquote("Mean basal area"~m^2/'ha'))+
+  labs(color = "Maximum  \ngrowing  \nspace")+
+  theme(strip.text.x = element_text(size = 30))+ #change size of facet grid title
+  guides(color = guide_legend(override.aes = list(size=5))) #change size of symbol
+
+
 #'
-ggsave(file="figures/BA_MGS_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
+ggsave(file="figures/BA_MGS_s1_LANDIS.tiff", plot = ba_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 
 #' Load gso_comp file
 #' 
-load('code/gso_comp.RData')
+#gso_comp_lf<-gso_comp
+#load('code/gso_comp.RData')
 #'
 #' LANDIS basal area model
 landisBA = gso_comp %>% group_by(EcoName, MGS) %>% summarise(maxBA = max(P95)) %>% mutate(MGS = as.numeric(as.character(MGS))) # get the max mean basal area per maximum growing space
@@ -1059,6 +1072,14 @@ load('code/baModel.RData')
 #'
 #' Get basal area observations by plot, stocking level, and ecoregion
 #' 
+fiaDir <- 'E:/Landis_Density_Succession/main_WI_2020'
+
+#getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
+#'
+library(rFIA)
+wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3)#%>% clipFIA() #These are the minimum FIA tables that we need for this exercise
+#wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
+wiTB$PLOT$ECO_PROVINCE<-substr(wiTB$PLOT$ECOSUBCD, start=2, stop=5) #Obtain the ecological section code
 wiBA <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTK'), byPlot = T)
 wiBA <- wiBA %>% filter(PLOT_STATUS_CD == 1)
 
@@ -1075,7 +1096,12 @@ wiSUMM <- tpa(wiTB, grpBy = c('ECO_PROVINCE', 'ALSTKCD'), variance = T)
 #' 
 FIA_mgs_plot<-ggplot(wiBA, aes(x=ALSTK, y=BAA)) +
   geom_point()+
-  facet_wrap(~ECO_PROVINCE)
+  facet_wrap(~ECO_PROVINCE)+
+  theme_bw()+
+  xlab("All live stocking code (ALSTKCD)")+
+  ylab(bquote("Mean basal area"~m^2/'ha'))+
+  theme(strip.text.x = element_text(size = 30))+
+  theme(axis.text=element_text(size=28, color="black"),axis.title=element_text(size=38,face="bold"))
 #'
 ggsave(file="figures/BA_MGS_FIA.tiff", plot = FIA_mgs_plot, width=600, height=450, units="mm", dpi=300, compression = "lzw")
 #'
@@ -1083,20 +1109,18 @@ ggsave(file="figures/BA_MGS_FIA.tiff", plot = FIA_mgs_plot, width=600, height=45
 #' Quantile regression stocking and basal area
 qs = c(0.95)
 #'
-#subsec.quant = wiBA %>% #not sure what is happening from here onward???????
+#subsec.quant = wiBA %>%
 #  split(.$ECO_PROVINCE) %>%
 #  map(~ rq(BAA ~ poly(ALSTK, 2), data=.x, tau=qs))
 
-
-
-subsec.quant = wiBA %>% #not sure what is happening from here onward???????
+subsec.quant = wiBA %>% 
   split(.$ECO_PROVINCE) %>%
   map(~ rq(BAA ~ ALSTK, data=.x, tau=qs))
 #'
 subsec.quant.pred = subsec.quant %>% 
   imap(~ predict(.x, data.frame(ALSTK=1:120), tau=qs))
 #'
-
+library(reshape2)
 predTB <- tibble(melt(subsec.quant.pred)) %>% rename(PRED = value, ECO_PROVINCE = L1) %>% 
   mutate(ALSTK = rep(1:120, times=11))
 

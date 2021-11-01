@@ -35,20 +35,21 @@ m2$result
 # Prepare the FIA table for validation ####
 #'
 WI_TREE<-read.csv("main_WI_2020/WI_TREE.csv")#read the tree table
-#WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
-WI_TREE <- WI_TREE %>% filter(INVYR >= 2000)
+WI_PLOT<-read.csv("main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_TREE <- WI_TREE %>% filter(INVYR >= 2000 & STATUSCD==1)
 #
 WI_TREE <- WI_TREE %>% mutate(TREE_CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
 WI_PLOT <- WI_PLOT %>% mutate(PLT_CN = as.character(CN), PREV_PLT_CN = as.character(PREV_PLT_CN))
 #' 
 #' Recode species
 #' Vectors containing generic categories
-vec99991<-c(531,462)
-vec99992<-c(202,57)
-vec99993<-c(901,373,552)
-vec99994<-c(68)
-vec99995<-c(763,319,682,921,923,920,681,501,357)
-vec99996<-c(500,356,761,660,922,766,502,760,934)
+vec99991<-c(531,462)#L_int_hard
+vec99992<-c(202,57) #L_tol_con
+vec99993<-c(901,373,552) #L_int_hard
+vec99994<-c(68) #L_int_con
+vec99995<-c(763,319,682,921,923,920,681,501,357,765,997,935,927,358,937,491) #S_tol_hard
+vec99996<-c(500,356,761,660,922,766,502,760,934) #S_int_hard
+
 #' 
 #' Rename the species codes
 WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
@@ -73,8 +74,9 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 
 #' 
 #' Read in the list of subplots run for the initial communities
-plt_list <- read_csv('data/WI_PLOT_LIST_updated.CSV')
-plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))
+#' Read in the plot list that meet the F/M condition & at least 3 remeasurements
+plt_list <- read.csv('code/WI_PLOT_FILTERED.csv')
+plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_'))
 #'
 #' Create a column for difference in time (tf-to)/time step in LANDIS-II
 #' 
@@ -86,13 +88,14 @@ plt_list$Time<-ifelse(plt_list$t3!=0,plt_list$t3-plt_list$t0,
 plt_list$tf<-ifelse(plt_list$t3!=0,plt_list$t3,
                       ifelse(plt_list$t2!=0,plt_list$t2, plt_list$t1))
 #'
-#' Select variables of interest
+#' Select variables of interest (this will be used to merge with the tree table and filter the correct observations to compare)
 #' 
 plt_list<-plt_list %>% select(SUBKEY, Time, tf)
 names(plt_list)[3]<-"INVYR" #rename tf
 #'
 #' (create SUBKEY in tree table)
-WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
+WI_TREE1 <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, SUBP, sep='_')) %>% 
+  mutate(KEY=str_c(STATECD, COUNTYCD, PLOT, sep='_'))%>%
   filter(SUBKEY %in% unique(plt_list$SUBKEY))
 #"
 #' Get the species list names
@@ -124,10 +127,13 @@ ref<-species_codes
 #'
 #' Select variables of interest tree table
 #' 
-WI_TREE1<-WI_TREE %>% select(SUBKEY, INVYR, SPCD, DIA, TPA_UNADJ, DRYBIO_AG)%>%
-  mutate(DIA_cm = DIA*2.54, #transform to cm
-         TreeNumber=round((TPA_UNADJ * 4 / 4046.86) * 169),#create a column with number of trees. 169 is the rounded subplot area in square meters. Expressed in a per hectare unit
-         DRYBIO_AG=DRYBIO_AG*(2.47105/2204.64)) #Biomass aboveground per hectacre (1 hectare = 2.47105 acres; 1 Mg = 2204.64 pounds) --> Units: Mg/ha)
+WI_TREE1<-WI_TREE1 %>% select(KEY,SUBKEY, INVYR, SPCD, DIA, TPA_UNADJ)%>%
+  mutate(DIA_cm = DIA*2.54, #transform inches to cm
+         TreeNumber=round((TPA_UNADJ * 4 / 4046.86) * 169),#create a column with number of trees. 169 is the rounded subplot area in square meters. Convert the TPA_UNADJ to fit the cell size
+         BA_m2=(pi*((DIA/2)*0.0254)^2*TreeNumber))#, #unit: sq meters. The tree number is already reflecting the scale (cell size)
+# DRYBIO_AG=DRYBIO_AG*(2.47105/2204.64)) #Biomass aboveground per hectacre (1 hectare = 2.47105 acres; 1 Mg = 2204.64 pounds) --> Units: Mg/ha)
+#'mutate(BA_PA=0.005454154*(DIA^2)*TPA_UNADJ) 
+#'BA.PH= (sum(BA_PA, na.rm=T)*(2.47105/10.7639))) #Basal area per hectare m^2/ha (1 square meter = 10.7639 square feet; 1 hectare = 2.47105 acres)
 #'
 #' Merge with plot list and species codes
 #' 
@@ -135,27 +141,41 @@ WI_TREE1<-merge(WI_TREE1,species_codes, by="SPCD")
 #'
 WI_TREE1<-merge(WI_TREE1,plt_list, by=c("SUBKEY", "INVYR"))
 #' 
-#' Remove trees with dry biomass of zero (which also don't have a diameter measured)
-#'
-WI_TREE1<-WI_TREE1 %>% filter(DRYBIO_AG!=0)
-#'
-#' Select variables of interest
-#' 
-WI_TREE1<-WI_TREE1 %>% select(SUBKEY, Time, Species, DIA_cm, TreeNumber)
 #'
 #' Create a column indicating that these observations are from FIA
 #' 
 WI_TREE1$Source<-"FIA"
+#'
+#' Now add the ecoregion to each observation
+#' 
+WI_PLOT <- WI_PLOT %>%  dplyr::select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
+  mutate(ECO_PROVINCE = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
+         KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))%>%
+          select(KEY, ECO_PROVINCE)
+#'
+WI_PLOT<-unique(WI_PLOT)#unique values for plot and ecoregion
+#'
+WI_TREE1<-merge(WI_TREE1,WI_PLOT, all.x=T, by=("KEY"))
+#'
+#' Select variables of interest
+#' 
+FIA_DB<-WI_TREE1 %>% select(SUBKEY, Time, Species, ECO_PROVINCE, TreeNumber, DIA_cm, BA_m2, Source)
+#'
+#' Remove any white spaces
+FIA_DB<-FIA_DB %>% 
+  mutate(across(where(is.character), str_remove_all, pattern = fixed(" ")))
+#'
+#'
 #' #################################################
 # Prepare the LANDIS data for validation ####
 #'
 #Read in LANDIS-II density log
 #'
-density<-read.csv("all_txt/Density_cohort_log_20yrsND.CSV")
+density<-read.csv("simulations/s2/Density_cohort_log_s2.CSV")
 #'
 #' Read the initial communities map codes (will be the SUBKEY)
 #' 
-map_codes<-read.csv("output/MAPVALUE_KEY.CSV")
+map_codes<-read.csv("simulations/s2/output/MAPVALUE_KEY.CSV")
 #' Get a SUBKEY removing INVYR
 p<-str_split(map_codes$PLT_KEY, '_', simplify=T)
 map_codes <- map_codes %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
@@ -164,9 +184,13 @@ map_codes <- map_codes %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',
 #' 
 density<-merge(density, map_codes, by.y=("MAPVALUE"), by.x=("SiteIndex"))
 #'
-density<-density %>% select (SUBKEY, Time, Species, Diameter, TreeNumber)
+density<-density %>% select (SUBKEY, Time, Species, ECO_PROVINCE, TreeNumber, Diameter)
 #'
-names(density) <-c("SUBKEY", "Time", "Species", "DIA_cm", "TreeNumber") #rename DB to match WI_TREE
+names(density) <-c("SUBKEY", "Time", "Species", "ECO_PROVINCE", "TreeNumber", "DIA_cm") #rename DB to match WI_TREE
+#'
+#' Now create the basal area variable
+#' 
+density<-density %>% mutate(BA_m2=(pi*((DIA_cm/2)*0.01)^2*TreeNumber)) #basal area in sq meters
 #'
 #' Now filter only tf in FIA
 #' 
@@ -177,4 +201,252 @@ densityL<-merge(density, tf, by=c("SUBKEY","Time"))
 #' Create the source column
 #' 
 densityL$Source <-"LANDIS"
+#'
+#' Remove extra space from species column
+#install.packages("stringr")
+#library(stringr)
+densityL<-densityL %>% 
+  mutate(across(where(is.character), str_remove_all, pattern = fixed(" ")))
+#'
+#'  #################################################
+# Merge the LANDIS and FIA datasets ####
+#'
 #' 
+s2<-rbind(FIA_DB, densityL)
+#' 
+#' Obtain the dataset for the first set of equivalence tests (ecoregion)
+s2_ecoreg<-s2%>% group_by(Source,ECO_PROVINCE, SUBKEY)%>%
+  summarize(meanDIA=sum(DIA_cm*TreeNumber, na.rm=T)/sum(TreeNumber, na.rm=T),
+            totalBA=sum(BA_m2, na.rm=T),
+            density=sum(TreeNumber, na.rm=T))
+#'
+#' Obtain the dataset for the second set of equivalence tests (species)
+s2_species_SUB<-s2%>% group_by(Source, Species, SUBKEY)%>%
+  summarize(meanDIA=sum(DIA_cm*TreeNumber, na.rm=T)/sum(TreeNumber, na.rm = T),
+            totalBA=sum(BA_m2, na.rm=T),
+            density=sum(TreeNumber, na.rm=T))
+#'
+s2_species_ECO<-s2%>% group_by(Source, ECO_PROVINCE, Species)%>%
+  summarize(meanDIA=sum(DIA_cm*TreeNumber, na.rm=T)/sum(TreeNumber, na.rm = T),
+            totalBA=sum(BA_m2, na.rm=T),
+            density=sum(TreeNumber, na.rm=T))
+#'
+#' Convert the dataset into a wide format
+#' 
+s2_ecoreg_wide<-s2_ecoreg%>% pivot_wider(id_cols=c(ECO_PROVINCE, SUBKEY), names_from=Source, values_from=c(meanDIA, totalBA, density))
+#'
+s2_species_wide_eco<-s2_species_ECO%>% pivot_wider(id_cols=c(ECO_PROVINCE, Species), names_from=Source, values_from=c(meanDIA, totalBA, density))
+#'
+s2_species_wide_SUB<-s2_species_SUB%>% pivot_wider(id_cols=c(Species, SUBKEY), names_from=Source, values_from=c(meanDIA, totalBA, density))
+#'
+#' Remove rows with missing values
+#'
+s2_ecoreg_wide<-s2_ecoreg_wide[complete.cases(s2_ecoreg_wide),]
+#'
+s2_species_wide_eco<-s2_species_wide_eco[complete.cases(s2_species_wide_eco),]
+#'
+s2_species_wide_SUB<-s2_species_wide_SUB[complete.cases(s2_species_wide_SUB),]
+#'
+# Equivalence test ecoregion mean diameter ####
+#install.packages("lattice")
+library(lattice)
+#'
+ecoreg_vec<-unique(s2_ecoreg_wide$ECO_PROVINCE)
+tost_eco<-list()
+result<-data.frame()
+tost_eco_result<-data.frame()
+#'
+for(i in 1:length(ecoreg_vec)){
+tempkey=ecoreg_vec[i]
+ecoregion<-s2_ecoreg_wide %>% filter(ECO_PROVINCE==tempkey)
+#
+
+my.plot<-equivalence.xyplot(ecoregion$meanDIA_FIA ~ ecoregion$meanDIA_LANDIS,
+                                      alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                                      xlab="Projected mean diameter (cm)",
+                                      ylab="Observed mean diameter (cm)")
+#
+ trellis.device(device="tiff", filename=paste("xyplot",tempkey,"meanDIA",".tiff", sep=""))
+ print(my.plot)
+ dev.off() #save the plot files
+#
+ecoregion_tost<-tost(ecoregion$meanDIA_FIA, ecoregion$meanDIA_LANDIS, epsilon = 3)
+result<-as.data.frame(ecoregion_tost$result)
+result$ECO_PROVINCE<-tempkey
+#
+tost_eco<-rbind(ecoregion_tost,tost_eco)
+tost_eco_result<-rbind(result,tost_eco_result)
+}
+#'
+#' For all together
+#equivalence.xyplot(s2_ecoreg_wide$meanDIA_FIA ~ s2_ecoreg_wide$meanDIA_LANDIS,
+#                   alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+#                   xlab="Projected mean diameter (cm)",
+#                   ylab="Observed mean diameter (cm)")
+
+#two-one-sided test (Results indicate obsht and predht2 are  equivalent, b/c dissimilarity is rejected)
+#s2_ecoreg_meanDIA<-tost(s2_ecoreg_wide$meanDIA_FIA, s2_ecoreg_wide$meanDIA_LANDIS, epsilon = 3)
+#s2_ecoreg_meanDIA$result #not equivalent because dissimilarity is not rejected
+#'
+# Equivalence test ecoregion density ####
+library(lattice)
+#'
+ecoreg_vec<-unique(s2_ecoreg_wide$ECO_PROVINCE)
+tost_eco_D<-list()
+result_D<-data.frame()
+tost_eco_result_D<-data.frame()
+#'
+for(i in 1:length(ecoreg_vec)){
+  tempkey=ecoreg_vec[i]
+  ecoregion<-s2_ecoreg_wide %>% filter(ECO_PROVINCE==tempkey)
+  #
+  
+  my.plot<-equivalence.xyplot(ecoregion$density_FIA ~ ecoregion$density_LANDIS,
+                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              xlab="Projected number of trees",
+                              ylab="Observed number of trees")
+  #
+  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"density",".tiff", sep=""))
+  print(my.plot)
+  dev.off() #save the plot files
+  #
+  ecoregion_tost_D<-tost(ecoregion$density_FIA, ecoregion$density_LANDIS, epsilon = 3)
+  result_D<-as.data.frame(ecoregion_tost_D$result)
+  result_D$ECO_PROVINCE<-tempkey
+  #
+  tost_eco_D<-rbind(ecoregion_tost_D,tost_eco_D)
+  tost_eco_result_D<-rbind(result_D,tost_eco_result_D)
+}
+#'
+#'
+# Equivalence test ecoregion total basal area ####
+library(lattice)
+#'
+ecoreg_vec<-unique(s2_ecoreg_wide$ECO_PROVINCE)
+tost_eco_BA<-list()
+result_BA<-data.frame()
+tost_eco_result_BA<-data.frame()
+#'
+for(i in 1:length(ecoreg_vec)){
+  tempkey=ecoreg_vec[i]
+  ecoregion<-s2_ecoreg_wide %>% filter(ECO_PROVINCE==tempkey)
+  #
+  
+  my.plot<-equivalence.xyplot(ecoregion$totalBA_FIA ~ ecoregion$totalBA_LANDIS,
+                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              xlab="Projected Basal area (m^2)",
+                              ylab="Observed Basal area (m^2)")
+  #
+  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"totalBA",".tiff", sep=""))
+  print(my.plot)
+  dev.off() #save the plot files
+  #
+  ecoregion_tost_BA<-tost(ecoregion$totalBA_FIA, ecoregion$totalBA_LANDIS, epsilon = 3)
+  result_BA<-as.data.frame(ecoregion_tost$result)
+  result_BA$ECO_PROVINCE<-tempkey
+  #
+  tost_eco_BA<-rbind(ecoregion_tost_BA,tost_eco_BA)
+  tost_eco_result_BA<-rbind(result_BA,tost_eco_result_BA)
+}
+#'
+#'
+#' ##########################################################
+#' SPECIES
+#' 
+# Equivalence test SPECIES mean diameter ####
+#install.packages("lattice")
+library(lattice)
+#'
+species_vec<-unique(s2_species_wide_SUB$Species)
+tost_sp<-list()
+result_sp<-data.frame()
+tost_sp_result<-data.frame()
+#'
+for(i in 1:length(species_vec)){
+  tempkey=species_vec[i]
+  species<-s2_species_wide_SUB %>% filter(Species==tempkey)
+  #
+  
+  my.plot<-equivalence.xyplot(species$meanDIA_FIA ~ species$meanDIA_LANDIS,
+                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              xlab="Projected mean diameter (cm)",
+                              ylab="Observed mean diameter (cm)")
+  #
+  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"meanDIA",".tiff", sep=""))
+  print(my.plot)
+  dev.off() #save the plot files
+  #
+  species_tost<-tost(species$meanDIA_FIA, species$meanDIA_LANDIS, epsilon = 3)
+  result_sp<-as.data.frame(species_tost$result)
+  result_sp$Species<-tempkey
+  #
+  tost_sp<-rbind(species_tost,tost_sp)
+  tost_sp_result<-rbind(result_sp,tost_sp_result)
+}
+#'
+#write.csv(tost_sp_result,'E:/Landis_Density_Succession/simulations/s2/results/tost_sp_dia_result.CSV')
+#'
+# Equivalence test SPECIES density ####
+library(lattice)
+#'
+species_vec<-unique(s2_species_wide_SUB$Species)
+tost_sp_d<-list()
+result_sp_d<-data.frame()
+tost_sp_result_d<-data.frame()
+#'
+for(i in 1:length(species_vec)){
+  tempkey=species_vec[i]
+  species<-s2_species_wide_SUB %>% filter(Species==tempkey)
+  #
+  
+  my.plot<-equivalence.xyplot(species$density_FIA ~ species$density_LANDIS,
+                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              xlab="Projected number of trees (cm)",
+                              ylab="Observed number of trees (cm)")
+  #
+  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"density",".tiff", sep=""))
+  print(my.plot)
+  dev.off() #save the plot files
+  #
+  species_tost_d<-tost(species$density_FIA, species$density_LANDIS, epsilon = 3)
+  result_sp_d<-as.data.frame(species_tost_d$result)
+  result_sp_d$Species<-tempkey
+  #
+  tost_sp_d<-rbind(species_tost_d,tost_sp_d)
+  tost_sp_result_d<-rbind(result_sp_d,tost_sp_result_d)
+}
+#write.csv(tost_sp_result_d,'E:/Landis_Density_Succession/simulations/s2/results/tost_sp_density_result.CSV')
+#'
+#'
+# Equivalence test SPECIES total basal area ####
+library(lattice)
+#'
+species_vec<-unique(s2_species_wide_SUB$Species)
+tost_sp_ba<-list()
+result_sp_ba<-data.frame()
+tost_sp_result_ba<-data.frame()
+#'
+for(i in 1:length(species_vec)){
+  tempkey=species_vec[i]
+  species<-s2_species_wide_SUB %>% filter(Species==tempkey)
+  #
+  
+  my.plot<-equivalence.xyplot(species$totalBA_FIA ~ species$totalBA_LANDIS,
+                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              xlab="Projected total basal area (m^2)",
+                              ylab="Observed total basal area (m^2)")
+  #
+  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"totalBA",".tiff", sep=""))
+  print(my.plot)
+  dev.off() #save the plot files
+  #
+  species_tost_ba<-tost(species$totalBA_FIA, species$totalBA_LANDIS, epsilon = 3)
+  result_sp_ba<-as.data.frame(species_tost_ba$result)
+  result_sp_ba$Species<-tempkey
+  #
+  tost_sp_ba<-rbind(species_tost_ba,tost_sp_ba)
+  tost_sp_result_ba<-rbind(result_sp_ba,tost_sp_result_ba)
+}
+#'
+#write.csv(tost_sp_result_ba,'E:/Landis_Density_Succession/simulations/s2/results/tost_sp_ba_result.CSV')
+#'
