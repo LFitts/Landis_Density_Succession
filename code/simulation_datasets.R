@@ -13,9 +13,12 @@ library(raster)
 #' 
 #' Read in the data for Wisconsin
 #' 
-WI_COND<-fread("main_WI_2020/WI_COND.csv", na.strings = "NA")#read the condition table
-WI_PLOT<-fread("main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
-WI_TREE<-fread("main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
+#WI_COND<-fread("main_WI_2020/WI_COND.csv", na.strings = "NA")#read the condition table
+#WI_PLOT<-fread("main_WI_2020/WI_PLOT.csv", na.strings = "NA")#read the plot table
+#WI_TREE<-fread("main_WI_2020/WI_TREE.csv", na.strings = "NA")#read the tree table
+WI_COND<-read_csv("data/main_WI_2020/WI_COND.csv")#read the condition table
+WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
 #'
 #' Just keep records from 2000 on. This is when the annual inventory for WI started
 #'
@@ -32,7 +35,7 @@ colnames(WI_TREE)[1]<-"TREE_CN"
 # Create subsets for the different model runs ----
 #' 
 #' Read in the plot list that meet the F/M condition & at least 3 remeasurements
-plt_list <- read.csv('code/WI_PLOT_FILTERED.csv')
+plt_list <- read_csv('code/WI_PLOT_FILTERED.csv')
 plt_list<-plt_list[,-13]
 #'
 #' Prepare the key column in the tree table
@@ -112,10 +115,12 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 #'
 #plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 4, 4), sep='_'))
 #'
-plt_list_s1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
-plt_list_s2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
-plt_list_s3 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 3, 3), sep='_'))
-plt_list<-rbind(plt_list_s1,plt_list_s2, plt_list_s3)
+plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
+
+#plt_list_s1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
+#plt_list_s2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
+#plt_list_s3 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 3, 3), sep='_'))
+#plt_list<-rbind(plt_list_s1,plt_list_s2, plt_list_s3)
 #'
 #'
 #'
@@ -157,7 +162,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('simulations/s1_s2_s3/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('simulations/s2/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
   {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -176,11 +181,11 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
 plt_exist <- plt_list %>% dplyr::filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
-landGrow <- read.table('simulations/s1_s2_s3/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+landGrow <- read.table('simulations/s2/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
 #'
 MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
-outFile = file('simulations/s1_s2_s3/Initial_Community.txt', 'w')
+outFile = file('simulations/s2/Initial_Community.txt', 'w')
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
 for (i in 1:nrow(plt_exist))
 {
@@ -218,16 +223,16 @@ for (i in 1:nrow(plt_exist))
 #'  
 }
 close(outFile)
-write_csv(MV_KEY, 'simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
+write_csv(MV_KEY, 'simulations/s2/output/MAPVALUE_KEY.csv')
 #' 
 #' ##################################################################################
 # 2. Maps: Subplots with ecoregions ----
 #'################################################################################### 
 #'
-MV_KEY<-read.csv('simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
+MV_KEY<-read_csv('simulations/s2/output/MAPVALUE_KEY.csv')
 #' Merge the plot list database with the ecological province variable:
 #'
-WI_PLOT$ECO_PROVINCE<-substr(WI_PLOT$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blank space at the beginning of the ECOSUBCD column from the FIA database
+WI_PLOT$ECO_PROVINCE<-substr(WI_PLOT$ECOSUBCD, start=1, stop=4) #Leave only the strings that correspond to the ecological province (from 2 to 4). Note that there is a blank space at the beginning of the ECOSUBCD column from the FIA database
 #' 
 WI_PLOT_COORD<-merge(WI_PLOT, plt_list, by.x=c("STATECD", "COUNTYCD", "PLOT", "INVYR"), by.y=c("STATECD", "COUNTYCD", "PLOT", "t0"))
 #' 
@@ -247,9 +252,9 @@ WI_PLOT_COORD$SUBP_ID<-seq(1,nrow(WI_PLOT_COORD),by=1)
 #install.packages("raster")
 #library(raster)
 #'
-#initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up later
+initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty ecoregion, initial communities and a subplot id raster to fill up later
 #initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=100, nrow=100, xmn=0,xmx=1297,ymn=0,ymx=1297,vals=0) #s1_s2..create empty ecoregion, initial communities and a subplot id raster to fill up later
-initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=117, nrow=117, xmn=0,xmx=1517.49,ymn=0,ymx=1517.49,vals=0) #s1_s2_s3..create empty ecoregion, initial communities and a subplot id raster to fill up later
+#initial_communities_map<-subplot_key<-ecoregion_map<-raster(ncol=117, nrow=117, xmn=0,xmx=1517.49,ymn=0,ymx=1517.49,vals=0) #s1_s2_s3..create empty ecoregion, initial communities and a subplot id raster to fill up later
 res(ecoregion_map) #check resolution
 ncell(ecoregion_map) #check number of cells
 #'
@@ -262,18 +267,18 @@ initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
 ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #
 #' Save the files
-writeRaster(ecoregion_map, "simulations/s1_s2_s3/ecoregion.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+writeRaster(ecoregion_map, "simulations/s2/ecoregion.img", NAflag=-9999, overwrite=T, datatype='INT2S')
 #'
 #plot(ecoregion_map)
 #'
-writeRaster(initial_communities_map, "simulations/s1_s2_s3/initialcommunity.img", NAflag=-9999, overwrite=T, datatype='INT2S')
+writeRaster(initial_communities_map, "simulations/s2/initialcommunity.img", NAflag=-9999, overwrite=T, datatype='INT2S')
 
 #'
 #' ##################################################################################
 # 3. Create table: Land use ----
 #'###################################################################################
 #' Read in initial communities key
-MV_KEY<-read.csv('simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
+MV_KEY<-read.csv('simulations/s2/output/MAPVALUE_KEY.csv')
 MV_KEY <- MV_KEY %>% rowwise() %>% mutate(KEY = paste(str_split(PLT_KEY, '_', simplify=T)[,1:3], collapse='_'))
 MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
 #'
@@ -422,7 +427,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('simulatios/s1_s2_s3/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('simulatios/s2/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
   {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -440,7 +445,7 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Assign each tree in a subplot to an age cohort
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
-outFile <-  file('simulations/s1_s2_s3/land-use.txt', 'w')
+outFile <-  file('simulations/s2/land-use.txt', 'w')
 #'
 #'
 cat('LandisData   "Land Use"',
@@ -515,11 +520,11 @@ for (ts in unique(land_use_change$TIME_STEP)[order(unique(land_use_change$TIME_S
 }
 
 close(outFile)
-write_csv(luKEY, 'simulations/s1_s2_s3/output/landuse_key.csv')
+write_csv(luKEY, 'simulations/s2/output/landuse_key.csv')
 #'
 #' Create land-use maps
 #' 
-MV_KEY <- read_csv('simulations/s1_s2_s3/output/MAPVALUE_KEY.csv')
+MV_KEY <- read_csv('simulations/s2/output/MAPVALUE_KEY.csv')
 MV_KEY <- MV_KEY %>% rowwise() %>% mutate(KEY = paste(str_split(PLT_KEY, '_', simplify=T)[,1:3], collapse='_'))
 MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
 #'
@@ -531,13 +536,13 @@ library(raster)
 #' 
 #' Loop through individual time-steps to create maps
 #' 
-#lu_map <- raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty map
+lu_map <- raster(ncol=80, nrow=80, xmn=0,xmx=1037.6,ymn=0,ymx=1037.6,vals=0) #create empty map
 #lu_map <- raster(ncol=100, nrow=100, xmn=0,xmx=1297,ymn=0,ymx=1297,vals=0) #create empty map for the pooled s1_s2
-lu_map <- raster(ncol=117, nrow=117, xmn=0,xmx=1517.49,ymn=0,ymx=1517.49,vals=0) #create empty map for the pooled s1_s2_s3
+#lu_map <- raster(ncol=117, nrow=117, xmn=0,xmx=1517.49,ymn=0,ymx=1517.49,vals=0) #create empty map for the pooled s1_s2_s3
 #"
 for (ts in 0:20)
 {
-  writeRaster(lu_map, paste0("simulations/s1_s2_s3/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
+  writeRaster(lu_map, paste0("simulations/s2/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
 }
 
 for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
@@ -546,7 +551,7 @@ for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
   sub_map <- lu_map 
   sub_map[sub_lu$MAPVALUE] <- sub_lu$LUMAPCODE
   
-  writeRaster(lu_map, paste0("simulations/s1_s2_s3/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
+  writeRaster(sub_map, paste0("simulations/s2/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
 }
 
 #
