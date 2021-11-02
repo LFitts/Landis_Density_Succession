@@ -34,8 +34,8 @@ m2$result
 #' #################################################
 # Prepare the FIA table for validation ####
 #'
-WI_TREE<-read.csv("main_WI_2020/WI_TREE.csv")#read the tree table
-WI_PLOT<-read.csv("main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
 WI_TREE <- WI_TREE %>% filter(INVYR >= 2000 & STATUSCD==1)
 #
 WI_TREE <- WI_TREE %>% mutate(TREE_CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
@@ -90,7 +90,7 @@ plt_list$tf<-ifelse(plt_list$t3!=0,plt_list$t3,
 #'
 #' Select variables of interest (this will be used to merge with the tree table and filter the correct observations to compare)
 #' 
-plt_list<-plt_list %>% select(SUBKEY, Time, tf)
+plt_list<-plt_list %>% dplyr::select(SUBKEY, Time, tf)
 names(plt_list)[3]<-"INVYR" #rename tf
 #'
 #' (create SUBKEY in tree table)
@@ -121,13 +121,13 @@ species_attributes$Species<-paste(species_attributes$name1,species_attributes$na
 #'
 #' Create a subset of this table just showing the species name and codes (this will be merged with the rest of the tables)
 #' 
-species_codes<-species_attributes%>% select(SPCD, Species)
+species_codes<-species_attributes%>% dplyr::select(SPCD, Species)
 #'
 ref<-species_codes
 #'
 #' Select variables of interest tree table
 #' 
-WI_TREE1<-WI_TREE1 %>% select(KEY,SUBKEY, INVYR, SPCD, DIA, TPA_UNADJ)%>%
+WI_TREE1<-WI_TREE1 %>% dplyr::select(KEY,SUBKEY, INVYR, SPCD, DIA, TPA_UNADJ)%>%
   mutate(DIA_cm = DIA*2.54, #transform inches to cm
          TreeNumber=round((TPA_UNADJ * 4 / 4046.86) * 169),#create a column with number of trees. 169 is the rounded subplot area in square meters. Convert the TPA_UNADJ to fit the cell size
          BA_m2=(pi*((DIA/2)*0.0254)^2*TreeNumber))#, #unit: sq meters. The tree number is already reflecting the scale (cell size)
@@ -151,7 +151,7 @@ WI_TREE1$Source<-"FIA"
 WI_PLOT <- WI_PLOT %>%  dplyr::select(PLT_CN, INVYR, STATECD, COUNTYCD, PLOT, ELEV, ECOSUBCD, CYCLE) %>%
   mutate(ECO_PROVINCE = str_replace(str_sub(ECOSUBCD, 1, -2), ' ', ''), 
          KEY = str_c(STATECD, COUNTYCD, PLOT, sep='_'))%>%
-          select(KEY, ECO_PROVINCE)
+        dplyr::select(KEY, ECO_PROVINCE)
 #'
 WI_PLOT<-unique(WI_PLOT)#unique values for plot and ecoregion
 #'
@@ -159,7 +159,7 @@ WI_TREE1<-merge(WI_TREE1,WI_PLOT, all.x=T, by=("KEY"))
 #'
 #' Select variables of interest
 #' 
-FIA_DB<-WI_TREE1 %>% select(SUBKEY, Time, Species, ECO_PROVINCE, TreeNumber, DIA_cm, BA_m2, Source)
+FIA_DB<-WI_TREE1 %>% dplyr::select(SUBKEY, Time, Species, ECO_PROVINCE, TreeNumber, DIA_cm, BA_m2, Source)
 #'
 #' Remove any white spaces
 FIA_DB<-FIA_DB %>% 
@@ -184,7 +184,7 @@ map_codes <- map_codes %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',
 #' 
 density<-merge(density, map_codes, by.y=("MAPVALUE"), by.x=("SiteIndex"))
 #'
-density<-density %>% select (SUBKEY, Time, Species, ECO_PROVINCE, TreeNumber, Diameter)
+density<-density %>% dplyr::select(SUBKEY, Time, Species, ECO_PROVINCE, TreeNumber, Diameter)
 #'
 names(density) <-c("SUBKEY", "Time", "Species", "ECO_PROVINCE", "TreeNumber", "DIA_cm") #rename DB to match WI_TREE
 #'
@@ -194,7 +194,7 @@ density<-density %>% mutate(BA_m2=(pi*((DIA_cm/2)*0.01)^2*TreeNumber)) #basal ar
 #'
 #' Now filter only tf in FIA
 #' 
-tf<-unique(WI_TREE1%>% select(SUBKEY,Time))
+tf<-unique(WI_TREE1%>% dplyr::select(SUBKEY,Time))
 #'
 densityL<-merge(density, tf, by=c("SUBKEY","Time"))
 #'
@@ -252,31 +252,42 @@ s2_species_wide_SUB<-s2_species_wide_SUB[complete.cases(s2_species_wide_SUB),]
 library(lattice)
 #'
 ecoreg_vec<-unique(s2_ecoreg_wide$ECO_PROVINCE)
-tost_eco<-list()
-result<-data.frame()
-tost_eco_result<-data.frame()
+
+eco_result_DIA <- tibble()
+tost_eco_result_DIA <- list()
 #'
 for(i in 1:length(ecoreg_vec)){
-tempkey=ecoreg_vec[i]
-ecoregion<-s2_ecoreg_wide %>% filter(ECO_PROVINCE==tempkey)
-#
+  tempkey=ecoreg_vec[i]
+  ecoregion<-s2_ecoreg_wide %>% filter(ECO_PROVINCE==tempkey)
+  #
+  
+  my.plot<-equivalence.xyplot(ecoregion$meanDIA_LANDIS~ ecoregion$meanDIA_FIA,
+                                        alpha=0.05, b0.ii=0.5, b1.ii=0.5,
+                                        xlab="observed mean diameter (cm)",
+                                        ylab="Predicted mean diameter (cm)")
+  #
+   trellis.device(device="tiff", filename=paste("simulations/s2/figures/meanDIA_ECO/eco/xyplot",tempkey,"meanDIA",".tiff", sep=""))
+   print(my.plot)
+   dev.off() #save the plot files
+  #
+  ecoregion_tost<-tost(ecoregion$meanDIA_LANDIS, ecoregion$meanDIA_FIA, epsilon = 0.5)
+  tostTest <- dataTOSTpaired(ecoregion, pairs = list(c(i1='meanDIA_LANDIS', i2='meanDIA_FIA')),
+                             low_eqbound = -0.5, high_eqbound = 0.5, desc=T, plots=T)
+  
+  result <- tibble(ECO_PROVINCE = tempkey,
+                    EPSILON = 0.5,
+                    p0 = tostTest$tost$asDF$`p[0]`,
+                    p1 = tostTest$tost$asDF$`p[1]`,
+                    p2 = tostTest$tost$asDF$`p[2]`,
+                   LANDIS_MEAN = tostTest$desc$asDF$`m[1]`,
+                   FIA_MEAN = tostTest$desc$asDF$`m[2]`) %>% 
+                    mutate(NULLHYP = if_else((p1 < 0.05) & (p2 < 0.05), 'REJECTED', 'NOT REJECTED'))
+  
+  eco_result_DIA <- eco_result_DIA %>% bind_rows(result)
 
-my.plot<-equivalence.xyplot(ecoregion$meanDIA_FIA ~ ecoregion$meanDIA_LANDIS,
-                                      alpha=0.05, b0.ii=0.05, b1.ii=0.2,
-                                      xlab="Projected mean diameter (cm)",
-                                      ylab="Observed mean diameter (cm)")
-#
- trellis.device(device="tiff", filename=paste("xyplot",tempkey,"meanDIA",".tiff", sep=""))
- print(my.plot)
- dev.off() #save the plot files
-#
-ecoregion_tost<-tost(ecoregion$meanDIA_FIA, ecoregion$meanDIA_LANDIS, epsilon = 3)
-result<-as.data.frame(ecoregion_tost$result)
-result$ECO_PROVINCE<-tempkey
-#
-tost_eco<-rbind(ecoregion_tost,tost_eco)
-tost_eco_result<-rbind(result,tost_eco_result)
+  tost_eco_result_DIA[[tempkey]] <- tostTest
 }
+
 #'
 #' For all together
 #equivalence.xyplot(s2_ecoreg_wide$meanDIA_FIA ~ s2_ecoreg_wide$meanDIA_LANDIS,
@@ -292,9 +303,9 @@ tost_eco_result<-rbind(result,tost_eco_result)
 library(lattice)
 #'
 ecoreg_vec<-unique(s2_ecoreg_wide$ECO_PROVINCE)
-tost_eco_D<-list()
-result_D<-data.frame()
-tost_eco_result_D<-data.frame()
+
+eco_result_DENS <- tibble()
+tost_eco_result_DENS <- list()
 #'
 for(i in 1:length(ecoreg_vec)){
   tempkey=ecoreg_vec[i]
@@ -302,20 +313,30 @@ for(i in 1:length(ecoreg_vec)){
   #
   
   my.plot<-equivalence.xyplot(ecoregion$density_FIA ~ ecoregion$density_LANDIS,
-                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
-                              xlab="Projected number of trees",
-                              ylab="Observed number of trees")
+                              alpha=0.05, b0.ii=0.5, b1.ii=0.5,
+                              ylab="Projected number of trees",
+                              xlab="Observed number of trees")
   #
-  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"density",".tiff", sep=""))
+  trellis.device(device="tiff", filename=paste("simulations/s2/figures/density/eco/xyplot",tempkey,"density",".tiff", sep=""))
   print(my.plot)
   dev.off() #save the plot files
   #
-  ecoregion_tost_D<-tost(ecoregion$density_FIA, ecoregion$density_LANDIS, epsilon = 3)
-  result_D<-as.data.frame(ecoregion_tost_D$result)
-  result_D$ECO_PROVINCE<-tempkey
-  #
-  tost_eco_D<-rbind(ecoregion_tost_D,tost_eco_D)
-  tost_eco_result_D<-rbind(result_D,tost_eco_result_D)
+  
+  tostTest <- dataTOSTpaired(ecoregion, pairs = list(c(i1='density_LANDIS', i2='density_FIA')),
+                             low_eqbound = -0.5, high_eqbound = 0.5, desc=T, plots=T)
+  
+  result <- tibble(ECO_PROVINCE = tempkey,
+                   EPSILON = 0.5,
+                   p0 = tostTest$tost$asDF$`p[0]`,
+                   p1 = tostTest$tost$asDF$`p[1]`,
+                   p2 = tostTest$tost$asDF$`p[2]`,
+                   LANDIS_MEAN = tostTest$desc$asDF$`m[1]`,
+                   FIA_MEAN = tostTest$desc$asDF$`m[2]`) %>% 
+    mutate(NULLHYP = if_else((p1 < 0.05) & (p2 < 0.05), 'REJECTED', 'NOT REJECTED'))
+  
+  eco_result_DENS <- eco_result_DENS %>% bind_rows(result)
+  
+  tost_eco_result_DENS[[tempkey]] <- tostTest
 }
 #'
 #'
@@ -323,30 +344,39 @@ for(i in 1:length(ecoreg_vec)){
 library(lattice)
 #'
 ecoreg_vec<-unique(s2_ecoreg_wide$ECO_PROVINCE)
-tost_eco_BA<-list()
-result_BA<-data.frame()
-tost_eco_result_BA<-data.frame()
+
+eco_result_BA <- tibble()
+tost_eco_result_BA <- list()
 #'
 for(i in 1:length(ecoreg_vec)){
   tempkey=ecoreg_vec[i]
   ecoregion<-s2_ecoreg_wide %>% filter(ECO_PROVINCE==tempkey)
   #
   
-  my.plot<-equivalence.xyplot(ecoregion$totalBA_FIA ~ ecoregion$totalBA_LANDIS,
-                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
-                              xlab="Projected Basal area (m^2)",
-                              ylab="Observed Basal area (m^2)")
+  my.plot<-equivalence.xyplot(ecoregion$totalBA_LANDIS ~ ecoregion$totalBA_FIA,
+                              alpha=0.05, b0.ii=0.5, b1.ii=0.5,
+                              ylab="Projected Basal area (m^2)",
+                              xlab="Observed Basal area (m^2)")
   #
-  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"totalBA",".tiff", sep=""))
+  trellis.device(device="tiff", filename=paste("simulations/s2/figures/totalBA/eco/xyplot",tempkey,"totalBA",".tiff", sep=""))
   print(my.plot)
   dev.off() #save the plot files
   #
-  ecoregion_tost_BA<-tost(ecoregion$totalBA_FIA, ecoregion$totalBA_LANDIS, epsilon = 3)
-  result_BA<-as.data.frame(ecoregion_tost$result)
-  result_BA$ECO_PROVINCE<-tempkey
-  #
-  tost_eco_BA<-rbind(ecoregion_tost_BA,tost_eco_BA)
-  tost_eco_result_BA<-rbind(result_BA,tost_eco_result_BA)
+  tostTest <- dataTOSTpaired(ecoregion, pairs = list(c(i1='totalBA_LANDIS', i2='totalBA_FIA')),
+                             low_eqbound = -0.5, high_eqbound = 0.5, desc=T, plots=T)
+  
+  result <- tibble(ECO_PROVINCE = tempkey,
+                   EPSILON = 0.5,
+                   p0 = tostTest$tost$asDF$`p[0]`,
+                   p1 = tostTest$tost$asDF$`p[1]`,
+                   p2 = tostTest$tost$asDF$`p[2]`,
+                   LANDIS_MEAN = tostTest$desc$asDF$`m[1]`,
+                   FIA_MEAN = tostTest$desc$asDF$`m[2]`) %>% 
+    mutate(NULLHYP = if_else((p1 < 0.05) & (p2 < 0.05), 'REJECTED', 'NOT REJECTED'))
+  
+  eco_result_BA <- eco_result_BA %>% bind_rows(result)
+  
+  tost_eco_result_BA[[tempkey]] <- tostTest
 }
 #'
 #'
@@ -358,9 +388,9 @@ for(i in 1:length(ecoreg_vec)){
 library(lattice)
 #'
 species_vec<-unique(s2_species_wide_SUB$Species)
-tost_sp<-list()
-result_sp<-data.frame()
-tost_sp_result<-data.frame()
+
+sp_result_DIA <- tibble()
+tost_sp_result_DIA <- list()
 #'
 for(i in 1:length(species_vec)){
   tempkey=species_vec[i]
@@ -368,15 +398,16 @@ for(i in 1:length(species_vec)){
   #
   
   my.plot<-equivalence.xyplot(species$meanDIA_FIA ~ species$meanDIA_LANDIS,
-                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              alpha=0.05, b0.ii=0.25, b1.ii=0.25,
                               xlab="Projected mean diameter (cm)",
-                              ylab="Observed mean diameter (cm)")
+                              ylab="Observed mean diameter (cm)",
+                              )
   #
-  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"meanDIA",".tiff", sep=""))
+  trellis.device(device="tiff", filename=paste("simulations/s2/figures/meanDIA_ECO/sp/xyplot",tempkey,"meanDIA",".tiff", sep=""))
   print(my.plot)
   dev.off() #save the plot files
   #
-  species_tost<-tost(species$meanDIA_FIA, species$meanDIA_LANDIS, epsilon = 3)
+  species_tost<-tost(species$meanDIA_FIA, species$meanDIA_LANDIS, epsilon = 0.5, )
   result_sp<-as.data.frame(species_tost$result)
   result_sp$Species<-tempkey
   #
@@ -400,15 +431,15 @@ for(i in 1:length(species_vec)){
   #
   
   my.plot<-equivalence.xyplot(species$density_FIA ~ species$density_LANDIS,
-                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              alpha=0.05, b0.ii=0.25, b1.ii=0.25,
                               xlab="Projected number of trees (cm)",
                               ylab="Observed number of trees (cm)")
   #
-  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"density",".tiff", sep=""))
+  trellis.device(device="tiff", filename=paste("simulations/s2/figures/density/sp/xyplot",tempkey,"density",".tiff", sep=""))
   print(my.plot)
   dev.off() #save the plot files
   #
-  species_tost_d<-tost(species$density_FIA, species$density_LANDIS, epsilon = 3)
+  species_tost_d<-tost(species$density_FIA, species$density_LANDIS, epsilon = 0.5)
   result_sp_d<-as.data.frame(species_tost_d$result)
   result_sp_d$Species<-tempkey
   #
@@ -432,15 +463,15 @@ for(i in 1:length(species_vec)){
   #
   
   my.plot<-equivalence.xyplot(species$totalBA_FIA ~ species$totalBA_LANDIS,
-                              alpha=0.05, b0.ii=0.05, b1.ii=0.2,
+                              alpha=0.05, b0.ii=0.25, b1.ii=0.25,
                               xlab="Projected total basal area (m^2)",
                               ylab="Observed total basal area (m^2)")
   #
-  trellis.device(device="tiff", filename=paste("xyplot",tempkey,"totalBA",".tiff", sep=""))
+  trellis.device(device="tiff", filename=paste("simulations/s2/figures/totalBA/sp/xyplot",tempkey,"totalBA",".tiff", sep=""))
   print(my.plot)
   dev.off() #save the plot files
   #
-  species_tost_ba<-tost(species$totalBA_FIA, species$totalBA_LANDIS, epsilon = 3)
+  species_tost_ba<-tost(species$totalBA_FIA, species$totalBA_LANDIS, epsilon = 0.5)
   result_sp_ba<-as.data.frame(species_tost_ba$result)
   result_sp_ba$Species<-tempkey
   #

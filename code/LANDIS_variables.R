@@ -1452,7 +1452,7 @@ for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
   sub_map <- lu_map 
   sub_map[sub_lu$MAPVALUE] <- sub_lu$LUMAPCODE
   
-  writeRaster(lu_map, paste0("all_txt/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
+  writeRaster(sub_map, paste0("all_txt/landuse-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S')
 }
 
 #' 
