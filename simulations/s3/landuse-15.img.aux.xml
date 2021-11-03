@@ -3,10 +3,10 @@
     <Description>Layer_1</Description>
     <Metadata>
       <MDI key="LAYER_TYPE">athematic</MDI>
-      <MDI key="STATISTICS_MAXIMUM">0</MDI>
-      <MDI key="STATISTICS_MEAN">0</MDI>
+      <MDI key="STATISTICS_MAXIMUM">2411</MDI>
+      <MDI key="STATISTICS_MEAN">44.090625</MDI>
       <MDI key="STATISTICS_MINIMUM">0</MDI>
-      <MDI key="STATISTICS_STDDEV">0</MDI>
+      <MDI key="STATISTICS_STDDEV">319.01962639456</MDI>
     </Metadata>
   </PAMRasterBand>
 </PAMDataset>
