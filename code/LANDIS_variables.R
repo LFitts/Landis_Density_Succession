@@ -752,6 +752,7 @@ WI_TREE <- WI_TREE %>% mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUB
 #ref <- ref %>% mutate(LANDSPEC = paste0(tolower(str_sub(GENUS,1,4)), str_sub(SPECIES,1,4))) %>%
 #  select(SPCD, LANDSPEC)
 ref<-species_codes
+colnames(ref) = c('SPCD', 'Name')
 #Area of site (raster cell size squared in meters)
 siteSize = 169
 #'
@@ -790,7 +791,7 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('LANDIS_work/all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+    landGrow <- read.table('LANDIS_work/all_txt/Ecoregion_diameter_table_boostedgrowth.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
   {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
@@ -810,11 +811,11 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
 plt_exist <- plt_list %>% filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
-landGrow <- read.table('all_txt/Ecoregion_diameter_table.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
+landGrow <- read.table('all_txt/Ecoregion_diameter_table_boostedgrowth.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))
 
 MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
-outFile = file('all_txt/Initial_Community.txt', 'w')
+outFile = file('all_txt/Initial_Community_boosted.txt', 'w')
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
 for (i in 1:nrow(plt_exist))
 {
@@ -830,7 +831,7 @@ for (i in 1:nrow(plt_exist))
     select(PLT_CN, Name, SUBP, TPA_UNADJ, DIA)
   if (nrow(TREE_SUB) == 0){next}
   
-  PLOT_SUB <- WI_PLOT %>% filter(PLT_CN == unique(TREE_SUB$PLT_CN))
+  PLOT_SUB <- WI_PLOT %>% filter(CN == unique(TREE_SUB$PLT_CN))
   ecoProv <- str_replace(PLOT_SUB$ECO_PROVINCE, ' ', '')
   TREE_SUB <- TREE_SUB %>% rowwise() %>%
     mutate(AGECLASS = ageClass(ecoProv, Name, (DIA * 2.54)),
@@ -1547,12 +1548,14 @@ temp<-wiTB$TREE %>% merge(wi.sp, by='PLT_CN')%>%
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
   summarise(max_dia=max(DIA, na.rm=T))%>%
   mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_"))#%>% na.omit()#%>%#create the identifier here as well
+
+colnames(species_codes) = c('SPCD', 'Name')
 #'
 #' Create the empty data frames needed for the loop
 #' 
 #' 
 dia_list <- list()
-
+growthAdj <- list('212Z' = 0.1, '222K' = 0.2, '222M' = 0.2)
 #'
 #' 
 library(data.table)
@@ -1562,6 +1565,7 @@ for(i in 1:length(sp_eco_listWI)){
   #"
   age_dia<-data.frame()
   tempkey=sp_eco_listWI[i]
+  ecoSec <- tempkey %>% str_split('_') %>% map_chr(., 1)
   #'
   smallWorkingTB <- dg.summ %>% filter(KEY==tempkey) %>% ungroup()
   fillTB <- tibble(sizeClass = as.double(1:4))
@@ -1581,7 +1585,12 @@ for(i in 1:length(sp_eco_listWI)){
     age <- max(smallGrowthMD$AGE) + 1
     subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
     diaGR <- subTB %>% slice(nrow(subTB))
-    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+    growth <- diaGR[[1,1]]
+    if (ecoSec %in% names(growthAdj))
+    {
+      growth <- growth + (growth * growthAdj[[ecoSec]])  
+    }
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
 
   }
   #'
@@ -1607,7 +1616,13 @@ for(i in 1:length(sp_eco_listWI)){
       diaGR <- subTB %>% slice(nrow(subTB))
     }
     
-    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    growth <- diaGR[[1,1]]
+    if (ecoSec %in% names(growthAdj))
+    {
+      growth <- growth + (growth * growthAdj[[ecoSec]])  
+    }
+    
+    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + growth))
     age <- age + 1
   }
   age_dia<-rbind(age_dia, growthMD)
@@ -1645,6 +1660,8 @@ for(i in 1:nrow(msngEcoSP)){
   #"
   age_dia <- data.frame()
   tempkey <- msngEcoSP[i, 1]
+  ecoSec <- tempkey %>% str_split('_') %>% map_chr(., 1)
+  
   spcd <- as.integer(str_split(tempkey, pattern = '_', simplify = T)[,2])
   #'
   smallWorkingTB <- dg.summ.state %>% filter(SPCD == spcd) %>% ungroup()
@@ -1664,7 +1681,14 @@ for(i in 1:nrow(msngEcoSP)){
     age <- max(smallGrowthMD$AGE) + 1
     subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
     diaGR <- subTB %>% slice(nrow(subTB))
-    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=msngEcoSP[i, 1],AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+    
+    growth <- diaGR[[1,1]]
+    if (ecoSec %in% names(growthAdj))
+    {
+      growth <- growth + (growth * growthAdj[[ecoSec]])  
+    }
+    
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=msngEcoSP[i, 1],AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
     
   }
   #'
@@ -1690,7 +1714,13 @@ for(i in 1:nrow(msngEcoSP)){
       diaGR <- subTB %>% slice(nrow(subTB))
     }
     
-    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    growth <- diaGR[[1,1]]
+    if (ecoSec %in% names(growthAdj))
+    {
+      growth <- growth + (growth * growthAdj[[ecoSec]])  
+    }
+    
+    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + growth))
     age <- age + 1
   }
   age_dia<-rbind(age_dia, growthMD)
@@ -1738,7 +1768,14 @@ for (i in 1:length(genericSpLst))
     age <- max(smallGrowthMD$AGE) + 1
     subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
     diaGR <- subTB %>% slice(nrow(subTB))
-    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + diaGR[[1,1]]))
+    
+    growth <- diaGR[[1,1]]
+    if (ecoSec %in% names(growthAdj))
+    {
+      growth <- growth + (growth * growthAdj[[ecoSec]])  
+    }
+    
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
 
   }
   #'
@@ -1764,7 +1801,9 @@ for (i in 1:length(genericSpLst))
       diaGR <- subTB %>% slice(nrow(subTB))
     }
     
-    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + diaGR[[1,1]]))
+    growth <- diaGR[[1,1]]
+    
+    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + growth))
     age <- age + 1
   }
   age_dia<-rbind(age_dia, growthMD) %>%       
@@ -1794,9 +1833,9 @@ maxAge <- do.call(rbind.data.frame, dia_list) %>% group_by(Name) %>% summarise(M
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
-writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = "all_txt/Ecoregion_diameter_table.txt") #creates the independent lines of text
+writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = "all_txt/Ecoregion_diameter_table_boostedgrowth.txt") #creates the independent lines of text
 lapply(1:length(dia_list), function(i) write.table(dia_list[[i]],
-                                                   file = "all_txt/Ecoregion_diameter_table.txt",
+                                                   file = "all_txt/Ecoregion_diameter_table_boostedgrowth.txt",
                                                    row.names = F,
                                                    append = T,
                                                    quote = F,
