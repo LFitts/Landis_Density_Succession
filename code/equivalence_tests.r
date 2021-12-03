@@ -430,3 +430,92 @@ for(i in 1:length(species_vec)){
 #'
 #write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/Landis_Density_Succession/simulations/s2/results/tost_sp_ba_result0.5.CSV')
 #'
+
+
+#' ############################################################################# 
+# Calculate stocking from LANDIS output ####
+#'
+stocking_coeff <- tibble(STOCKING_SPGRPCD = 1:36,
+                         b0 = c(0.00869,0.00454,0.01691,0.00946,0.00422,0.00509,
+                                0.00458,0.00335,0.01367,0.00250,0.00609,0.00914,
+                                0.00900,0.00680,0.00769,0.00433,0.00313,0.00427,
+                                0.00333,0.00000,0.00000,0.00000,0.00000,0.00000,
+                                0.01105,0.01671,0.00694,0.00635,0.01119,0.01546,
+                                0.00429,0.01429,0.02197,0.00000,0.00442,0.00688),
+                         b1 = c(1.48,1.73,1.05,1.59,1.70,1.81,1.91,1.73,1.44,2.00,
+                                1.67,1.67,1.51,1.72,1.54,1.80,2.11,1.67,1.68,1.00,
+                                1.00,1.00,1.00,1.00,1.53,1.41,1.86,1.89,1.63,1.50,
+                                1.87,1.46,1.13,1.00,2.02,1.86))
+
+siteStocking <- function(grp_data)
+{
+  # Details in https://www.fs.fed.us/fmsc/ftp/fvs/docs/gtr/Arner2001.pdf
+  siteTB <- grp_data
+  siteTB <- siteTB %>% left_join(., stocking_coeff, by = 'STOCKING_SPGRPCD')
+  max_diameter <- siteTB %>% summarise(max(Diameter)) %>% pull()
+  max_smallDia <- siteTB %>% filter(Diameter < 5.0) %>% summarise(max(Diameter)) %>% pull()
+  
+  # Calculate stocking using per acre transformation
+  siteTB <- siteTB %>% mutate(tree_stock = ((b0 * Diameter^b1) * TreeNumber * 24))
+  
+  stocking_largeSC <- siteTB %>% filter(Diameter >= 5.0) %>% summarise(sum(tree_stock)) %>% pull()
+  
+  dmax <- if_else(stocking_largeSC >= 10.0, 5.0, max_smallDia)
+  
+  siteTB <- siteTB %>% mutate(CF = if_else(Diameter >= 5.0, 1.0, Diameter / dmax))
+  siteTB <- siteTB %>% mutate(tree_stock = tree_stock * CF)
+  
+  return(sum(siteTB$tree_stock))
+}
+
+WI_TREE_FULL<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_TREE_ST <- WI_TREE_FULL %>% 
+  filter(INVYR >= 2000 & STATUSCD==1) %>% 
+  select(CN, PLT_CN, INVYR, STATECD, COUNTYCD,
+  PLOT, SUBP, TREE, STATUSCD, SPCD, SPGRPCD,
+  DIA, CCLCD, TPA_UNADJ, STOCKING) %>% 
+  mutate(SUBKEY = str_c(STATECD, COUNTYCD, PLOT, INVYR, SUBP, sep='_'), 
+         KEY=str_c(STATECD, COUNTYCD, PLOT, sep='_'),
+         STOCK_EX = STOCKING * 4)  
+
+# REF_SPECIES table contains the classes for stocking coefficients (STOCKING_SPGRPCD)
+ref <- read_csv('data/REF_SPECIES.csv')
+ref <- ref %>% mutate(LANDSPEC = paste0(tolower(str_sub(GENUS,1,4)), str_sub(SPECIES,1,4))) %>%
+  select(SPCD, LANDSPEC, STOCKING_SPGRPCD)
+
+#Read in LANDIS-II density log
+#'
+density <- read_csv("simulations/s2/Density_cohort_log_s2.CSV")
+#'
+#' Read the initial communities map codes (will be the SUBKEY)
+#' 
+map_codes <- read_csv("simulations/s2/output/MAPVALUE_KEY.CSV")
+
+# Join to reference for stocking coefficients
+density <- density %>% left_join(., ref, by = c('Species' = 'LANDSPEC')) %>% select(-...9)
+
+# Convert diameters to inches
+density <- density %>% mutate(Diameter = Diameter / 2.54)
+
+# Summarise stocking for each site by year
+stocking_summ <- density %>% group_by(SiteIndex, Time) %>% 
+  do(STOCKING = siteStocking(.)) %>% 
+  unnest()
+
+# Summarise FIA stocking by subplot 
+FIA_summ <- WI_TREE_ST %>% group_by(SUBKEY) %>% summarise(STOCKING = sum(STOCK_EX))
+
+
+# Test stocking calculations from source: https://www.fs.fed.us/fmsc/ftp/fvs/docs/gtr/Arner2001.pdf
+test <- WI_TREE_ST %>% filter(SUBKEY == '55_1_10350_2004_4')
+test <- test %>% left_join(., ref, by = 'SPCD') %>% left_join(., stocking_coeff, by = 'STOCKING_SPGRPCD')
+test <- test %>% mutate(ST_1 = (b0 * DIA^b1) * TPA_UNADJ * 4)
+test <- test %>% mutate(CF = case_when(
+                        CCLCD == 1 ~ 1.0,
+                        CCLCD == 2 ~ 1.0,
+                        CCLCD == 3 ~ 1.0,
+                        CCLCD == 4 ~ 0.5,
+                        CCLCD == 5 ~ 0.1,
+                        TRUE ~ NA_real_))
+
+test <- test %>% mutate(ST_2 = ST_1 * CF)
