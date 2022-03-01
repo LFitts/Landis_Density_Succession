@@ -7,27 +7,51 @@
 #'
 s2_species_wide_SUB <- read_csv('./output/s2_species_wide_sub.csv')
 
-x11()
-ggplot(s2_species_wide_SUB %>% filter(Species == 'thujocci'), aes(totalBA_FIA, totalBA_LANDIS)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 1.0)) +
-  scale_y_continuous(limits = c(0, 1.0)) +
-  geom_abline(slope = 1, intercept = 0) +
-  facet_wrap(vars(ECO_PROVINCE))
+speciesSet = c('abiebals', 'poputrem', 'pinuresi', 'thujocci', 'pinubank', 'prunsero',
+               'picemari', 'queralba', 'ostrvirg', 'tsugcana')
 
-ggplot(s2_species_wide_SUB %>% filter(Species == 'thujocci'), aes(meanDIA_FIA, meanDIA_LANDIS)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 40.0)) +
-  scale_y_continuous(limits = c(0, 40.0)) +
-  geom_abline(slope = 1, intercept = 0) +
-  facet_wrap(vars(ECO_PROVINCE))
+speciesSumm <- s2_species_wide_SUB %>% group_by(Species) %>% 
+  summarise(maxBA = max(totalBA_LANDIS, totalBA_FIA),
+            maxDIA = max(meanDIA_LANDIS, meanDIA_FIA),
+            maxDENS = max(density_LANDIS, density_FIA))
 
-ggplot(s2_species_wide_SUB %>% filter(Species == 'thujocci'), aes(density_FIA, density_LANDIS)) +
-  geom_point() +
-  scale_x_continuous(limits = c(0, 150.0)) +
-  scale_y_continuous(limits = c(0, 150.0)) +
-  geom_abline(slope = 1, intercept = 0) +
-  facet_wrap(vars(ECO_PROVINCE))
+for (sp in speciesSet){
+  spMaxBA <- speciesSumm %>% filter(Species == sp) %>% select(maxBA) %>% pull()
+  ggplot(s2_species_wide_SUB %>% filter(Species == sp), aes(totalBA_FIA, totalBA_LANDIS)) +
+    geom_point() +
+    scale_x_continuous(limits = c(0, spMaxBA)) +
+    scale_y_continuous(limits = c(0, spMaxBA)) +
+    coord_fixed() +
+    geom_abline(slope = 1, intercept = 0) +
+    facet_wrap(vars(ECO_PROVINCE)) +
+    theme_classic()
+  ggsave(paste0('./output/CalibrationTest/', sp, '_BA.tiff'))
+  
+  spMaxDIA <- speciesSumm %>% filter(Species == sp) %>% select(maxDIA) %>% pull()
+  ggplot(s2_species_wide_SUB %>% filter(Species == sp), aes(meanDIA_FIA, meanDIA_LANDIS)) +
+    geom_point() +
+    scale_x_continuous(limits = c(0, spMaxDIA)) +
+    scale_y_continuous(limits = c(0, spMaxDIA)) +
+    coord_fixed() +
+    geom_abline(slope = 1, intercept = 0) +
+    geom_vline(aes(xintercept = 12.7, colour = 'red')) +
+    geom_hline(aes(yintercept = 12.7, colour = 'red')) +
+    facet_wrap(vars(ECO_PROVINCE)) +
+    theme_classic()
+  ggsave(paste0('./output/CalibrationTest/', sp, '_DIA.tiff'))
+  
+  spMaxDENS <- speciesSumm %>% filter(Species == sp) %>% select(maxDENS) %>% pull()
+  ggplot(s2_species_wide_SUB %>% filter(Species == sp), aes(density_FIA, density_LANDIS)) +
+    geom_point() +
+    scale_x_continuous(limits = c(0, spMaxDENS)) +
+    scale_y_continuous(limits = c(0, spMaxDENS)) +
+    coord_fixed() +
+    geom_abline(slope = 1, intercept = 0) +
+    facet_wrap(vars(ECO_PROVINCE)) +
+    theme_classic()
+  ggsave(paste0('./output/CalibrationTest/', sp, '_DENS.tiff'))
+}
+
 #'
 #' ##################################################################################
 # 2. Create table: Calibrate Species Ecoregion diameter table ----
@@ -106,20 +130,37 @@ colnames(species_codes) = c('SPCD', 'Name')
 #' Create the empty data frames needed for the loop
 #' 
 #' 
-dia_list <- list()
 
 
-#'
+#' Species with over-prediction of small diameter
+smallDiaSlow <- c(12, 701, 746, 762)
+
+#' Species with under-prediction of small diameter
+smallDiaBoost <- c(241)
+
+#' Species with over-prediction of large diameter
+largeDiaSlow <- c(95, 105, 746)
+
+#' Species with under-prediction of large diameter
+largeDiaBoost <- c(802, 241, 261)
+
+#' Set growth modifier
+growMod <- 0.2
 #' 
 library(data.table)
 #' Create the for loop
 #' 
+dia_list <- list()
 for(i in 1:length(sp_eco_listWI)){
   #"
+  
   age_dia<-data.frame()
   tempkey=sp_eco_listWI[i]
   ecoSec <- tempkey %>% str_split('_') %>% map_chr(., 1)
-  spCD <- tempkey %>% str_split('_') %>% map_chr(., 2)
+  spCD <- as.integer(tempkey %>% str_split('_') %>% map_chr(., 2))
+  if (!(spCD %in% c(smallDiaSlow, smallDiaBoost, largeDiaSlow, largeDiaBoost))){
+    next
+  }
   #'
   smallWorkingTB <- dg.summ %>% filter(KEY==tempkey) %>% ungroup()
   fillTB <- tibble(sizeClass = as.double(1:4))
@@ -140,10 +181,15 @@ for(i in 1:length(sp_eco_listWI)){
     subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
     diaGR <- subTB %>% slice(nrow(subTB))
     growth <- diaGR[[1,1]]
-    if (spCD == '12')
+    if (spCD %in% smallDiaSlow)
     {
-      growth <- growth - (growth * 0.1)  
+      growth <- growth - (growth * growMod)  
     }
+    else if (spCD %in% smallDiaBoost)
+    {
+      growth <- growth + (growth * growMod)  
+    }
+    
     smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
     
   }
@@ -171,9 +217,13 @@ for(i in 1:length(sp_eco_listWI)){
     }
     
     growth <- diaGR[[1,1]]
-    if (spCD == '241')
+    if (spCD %in% smallDiaSlow)
     {
-      growth <- growth + (growth * 0.1)  
+      growth <- growth - (growth * growMod)  
+    }
+    else if (spCD %in% smallDiaBoost)
+    {
+      growth <- growth + (growth * growMod)  
     }
     
     growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + growth))
@@ -189,12 +239,12 @@ for(i in 1:length(sp_eco_listWI)){
   if(sum(is.na(age_dia$Name)) > 0){print(tempkey)}
   
   dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
-  #print(tempkey)
+  print(tempkey)
   
 }
 
 print('End part 1')
-ecoSp <- expand.grid(unique(wiTB$PLOT$ECO_PROVINCE), spcds, stringsAsFactors = F) %>% 
+ecoSp <- expand.grid(unique(wiTB$PLOT$ECO_PROVINCE), unique(c(smallDiaSlow, smallDiaBoost, largeDiaSlow, largeDiaBoost)), stringsAsFactors = F) %>% 
   mutate(SPECOKEY = str_c(Var1, Var2, sep = '_')) %>% select(SPECOKEY)
 
 msngEcoSP <- ecoSp %>% filter(!(SPECOKEY %in% names(dia_list)))
@@ -217,6 +267,9 @@ for(i in 1:nrow(msngEcoSP)){
   ecoSec <- tempkey %>% str_split('_') %>% map_chr(., 1)
   
   spcd <- as.integer(str_split(tempkey, pattern = '_', simplify = T)[,2])
+  if (!(spcd %in% c(smallDiaSlow, smallDiaBoost, largeDiaSlow, largeDiaBoost))){
+    next
+  }
   #'
   smallWorkingTB <- dg.summ.state %>% filter(SPCD == spcd) %>% ungroup()
   fillTB <- tibble(sizeClass = as.double(1:4))
@@ -237,9 +290,13 @@ for(i in 1:nrow(msngEcoSP)){
     diaGR <- subTB %>% slice(nrow(subTB))
     
     growth <- diaGR[[1,1]]
-    if (spCD == '12')
+    if (spCD %in% smallDiaSlow)
     {
-      growth <- growth - (growth * 0.1)  
+      growth <- growth - (growth * growMod)  
+    }
+    else if (spCD %in% smallDiaBoost)
+    {
+      growth <- growth + (growth * growMod)  
     }
     
     smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=msngEcoSP[i, 1],AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
@@ -269,10 +326,13 @@ for(i in 1:nrow(msngEcoSP)){
     }
     
     growth <- diaGR[[1,1]]
-    growth <- diaGR[[1,1]]
-    if (spCD == '241')
+    if (spCD %in% largeDiaSlow)
     {
-      growth <- growth + (growth * 0.1)  
+      growth <- growth - (growth * growMod)  
+    }
+    else if (spCD %in% largeDiaBoost)
+    {
+      growth <- growth + (growth * growMod)  
     }
     
     growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + growth))
@@ -288,105 +348,32 @@ for(i in 1:nrow(msngEcoSP)){
   if(sum(is.na(age_dia$Name)) > 0){print(tempkey)}
   
   dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
-  #print(tempkey)
+  print(tempkey)
   
 }
+
 print('End part 2')
+  
+spcNames <- species_codes %>% 
+  filter(SPCD %in% c(smallDiaSlow, smallDiaBoost, largeDiaSlow, largeDiaBoost)) %>% 
+  select(Name) %>% pull()
 
-#' add to dia the values for the generic categories?
-genericSpLst <- list(l_tohard = 318,
-                     l_toconi = 12,
-                     l_inhard = 746,
-                     l_inconi = 125,
-                     s_tohard = 701,
-                     s_inhard = 500)
-
-for (i in 1:length(genericSpLst))
-{
-  age_dia <- data.frame()
-  spcd <- genericSpLst[[i]]
-  #'
-  smallWorkingTB <- dg.summ.state %>% filter(SPCD == spcd) %>% ungroup()
-  fillTB <- tibble(sizeClass = as.double(1:4))
-  smallWorkingTB <- smallWorkingTB %>% full_join(fillTB, by='sizeClass')
-  smallWorkingTB$DIA_GROW<-ifelse(smallWorkingTB$DIA_GROW<=0,NA,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-  
-  smallWorkingTB <- smallWorkingTB %>% fill(everything(), .direction = 'downup') %>% 
-    arrange(sizeClass)
-  
-  smallWorkingTB$DIA_GROW<-ifelse(is.na(smallWorkingTB$DIA_GROW),0.04,smallWorkingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-  
-  #'
-  smallGrowthMD <-tibble(KEY=tempkey,AGE = 1, DIA = 1.0)
-  
-  while(max(smallGrowthMD$DIA) < 5){
-    age <- max(smallGrowthMD$AGE) + 1
-    subTB <- smallWorkingTB %>% filter(sizeClass <= max(smallGrowthMD$DIA)) %>% ungroup() %>% select(DIA_GROW) 
-    diaGR <- subTB %>% slice(nrow(subTB))
-    
-    growth <- diaGR[[1,1]]
-#    if (ecoSec %in% names(growthAdj))
-#    {
-#      growth <- growth + (growth * growthAdj[[ecoSec]])  
-#    }
-    
-    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
-    
-  }
-  #'
-  #' Now for the trees >=5"
-  #' 
-  workingTB <- stVR %>% filter(SPCD == spcd & !(is.na(DIA_GROW)))
-  #'
-  growthMD <- smallGrowthMD
-  age <- max(growthMD$AGE) + 1
-  #'
-  #' Fill in zeros
-  workingTB$DIA_GROW<-ifelse(workingTB$DIA_GROW<=0,NA,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-  workingTB <- workingTB %>% fill(DIA_GROW, .direction = 'downup')
-  workingTB$DIA_GROW<-ifelse(is.na(workingTB$DIA_GROW),0.04,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
-  
-  #'
-  while(max(growthMD$DIA) < maxtable.state$max_dia[which(maxtable.state$SPCD==spcd)]){
-    if (max(growthMD$DIA) < min(workingTB$sizeClass, na.rm = T))
-    {
-      diaGR <- subTB %>% slice(1)
-    } else {
-      subTB <- workingTB %>% filter(sizeClass <= max(growthMD$DIA)) %>% select(DIA_GROW)
-      diaGR <- subTB %>% slice(nrow(subTB))
-    }
-    
-    growth <- diaGR[[1,1]]
-    
-    growthMD <- bind_rows(growthMD, tibble(KEY=tempkey,AGE = age, DIA = max(growthMD$DIA) + growth))
-    age <- age + 1
-  }
-  age_dia<-rbind(age_dia, growthMD) %>%       
-    mutate(Name = names(genericSpLst)[i], 
-           DIA = round((DIA * 2.54), digits = 3))
-  
-  
-  
-  for (j in unique(wiTB$PLOT$ECO_PROVINCE))
-  {
-    tempkey <- str_c(j, names(genericSpLst)[i])
-    
-    age_dia <- age_dia %>% 
-      mutate(ECO_PROVINCE = j)
-    if(sum(is.na(age_dia$Name)) > 0){print(tempkey)}
-    
-    dia_list[[tempkey]] <- age_dia %>% select(ECO_PROVINCE, Name, AGE, DIA)
-    #print(tempkey)
-  }
-  
-}
+diameterTemp <- read_table('all_txt/Ecoregion_diameter_table.txt', skip = 4, col_names = c('Ecoregion', 'Species', 'Age', 'Diameter'))
+diameterTemp <- diameterTemp %>% filter(!(Species %in% spcNames))
 
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
-writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = "all_txt/Ecoregion_diameter_table_boostedgrowth.txt") #creates the independent lines of text
+outFile <- paste0("all_txt/Ecoregion_diameter_table_", growMod, ".txt")
+writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = outFile) #creates the independent lines of text
+write.table(diameterTemp,
+            file = outFile,
+            row.names = F,
+            append = T,
+            quote = F,
+            col.names = F)
 lapply(1:length(dia_list), function(i) write.table(dia_list[[i]],
-                                                   file = "all_txt/Ecoregion_diameter_table_speciescalibration.txt",
+                                                   file = outFile,
                                                    row.names = F,
                                                    append = T,
                                                    quote = F,
