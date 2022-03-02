@@ -149,11 +149,12 @@ FIA_DB<-FIA_DB %>%
 #'
 #Read in LANDIS-II density log
 #'
-density<-read.csv("simulations/s2/Density_cohort_log_s2.CSV")
+#density<-read.csv("simulations/s2/Density_cohort_log_s2.CSV")
+density<-read.csv("simulations/s1_s2/Density_cohort_log_s1s2.CSV") ### make sure to change these when testing different subplots
 #'
 #' Read the initial communities map codes (will be the SUBKEY)
 #' 
-map_codes<-read.csv("simulations/s2/output/MAPVALUE_KEY.CSV")
+map_codes<-read.csv("simulations/s1_s2/output/MAPVALUE_KEY.CSV")
 #' Get a SUBKEY removing INVYR
 p<-str_split(map_codes$PLT_KEY, '_', simplify=T)
 map_codes <- map_codes %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
@@ -224,6 +225,12 @@ s2_ecoreg_wide<-s2_ecoreg_wide[complete.cases(s2_ecoreg_wide),]
 s2_species_wide_eco<-s2_species_wide_eco[complete.cases(s2_species_wide_eco),]
 #'
 s2_species_wide_SUB<-s2_species_wide_SUB[complete.cases(s2_species_wide_SUB),]
+#'
+#' Add the ecological section to it
+#' 
+s2_species_wide_SUB<-s2_species_wide_SUB %>% left_join(map_codes %>% dplyr::select(SUBKEY, ECO_PROVINCE), by="SUBKEY")
+#'
+#write.csv(s2_species_wide_SUB, 'output/s1s2_species_wide_sub.CSV')
 #'
 # Equivalence test ecoregion mean diameter ####
 #'

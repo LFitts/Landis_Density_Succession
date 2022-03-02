@@ -5,6 +5,7 @@
 #'
 #' From FIA diameter growth estimates
 #'
+library(tidyverse)
 s2_species_wide_SUB <- read_csv('./output/s2_species_wide_sub.csv')
 
 speciesSet = c('abiebals', 'poputrem', 'pinuresi', 'thujocci', 'pinubank', 'prunsero',
@@ -63,14 +64,40 @@ for (sp in speciesSet){
 library(rFIA)
 library(tidyverse)
 #'###############################################################
-#Point to directory containing FIA tables
-fiaDir <- 'D:/fia/rFIA/'
+#' Species code object
+#' Read in the species attributes table
+#'
+species_attributes<-read.csv('data/species_attributes.CSV')
+#'
+#' Create a "name" column with the format Landis uses (4 letters of the genus+4letters of the species)
+species_attributes<-tidyr::separate(species_attributes, Scientific_name, c("genus", "species"), "\\s(?:.+\\s)?") #separate the string for scientific name into character vectors divided by the space
+#'
+#' convert the genus to lower letter
+#' 
+species_attributes$genus<-tolower(species_attributes$genus)
+#'
+#' Create temporary columns with parts
+species_attributes<-species_attributes %>% 
+  mutate(name1=substr(genus, start=1, stop=4))%>%
+  mutate(name2=substr(species, start=1, stop=4))
+#'
+#' Now paste the two pieces together
+#' 
+species_attributes$Name<-paste(species_attributes$name1,species_attributes$name2, sep="" )
+#'
+#' Create a subset of this table just showing the species name and codes (this will be merged with the rest of the tables)
+#' 
+species_codes<-species_attributes%>% select(SPCD, Name)
+#'
+#' Now back to the ecoregion-diameter table
+#' 
+#' Point to directory containing FIA tables
+#'
+fiaDir <- 'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/data/main_WI_2020'
+#fiaDir <- 'D:/fia/rFIA'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
 wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3)%>% clipFIA() #These are the minimum FIA tables that we need for this exercise
-#wiTB <- clipFIA(wiTB) #keeps only the most recent inventory
-wiTB2<-wiTB
-
 #'
 #' Species codes for the 30 most abundant WI species (same as the ones used inn the species attributes table)
 spcds <- c(746, 316, 318, 12, 125, 241, 375, 543, 833, 951, 129, 743, 972, 105, 95, 762, 809, 71, 802, 544, 701, 371, 837, 541, 261, 94, 823, 313, 407, 402)
@@ -130,8 +157,6 @@ colnames(species_codes) = c('SPCD', 'Name')
 #' Create the empty data frames needed for the loop
 #' 
 #' 
-
-
 #' Species with over-prediction of small diameter
 smallDiaSlow <- c(12, 701, 746, 762)
 
@@ -145,7 +170,7 @@ largeDiaSlow <- c(95, 105, 746)
 largeDiaBoost <- c(802, 241, 261)
 
 #' Set growth modifier
-growMod <- 0.2
+growMod <- 0.2 #this is what needs to be modified every time we calibrate with a different value
 #' 
 library(data.table)
 #' Create the for loop
@@ -358,13 +383,15 @@ spcNames <- species_codes %>%
   filter(SPCD %in% c(smallDiaSlow, smallDiaBoost, largeDiaSlow, largeDiaBoost)) %>% 
   select(Name) %>% pull()
 
-diameterTemp <- read_table('all_txt/Ecoregion_diameter_table.txt', skip = 4, col_names = c('Ecoregion', 'Species', 'Age', 'Diameter'))
+#diameterTemp <- read.table('all_txt/Ecoregion_diameter_table.txt', skip = 4, col.names = c('Ecoregion', 'Species', 'Age', 'Diameter'), sep=" ")
+diameterTemp <- read.table('simulations/s1_s2/Ecoregion_diameter_table.txt', skip = 4, col.names = c('Ecoregion', 'Species', 'Age', 'Diameter'), sep=" ")
 diameterTemp <- diameterTemp %>% filter(!(Species %in% spcNames))
 
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
-outFile <- paste0("all_txt/Ecoregion_diameter_table_", growMod, ".txt")
+#outFile <- paste0("all_txt/Ecoregion_diameter_table_", growMod, ".txt")
+outFile <- paste0("simulations/s1_s2/Ecoregion_diameter_table_", growMod, ".txt")
 writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = outFile) #creates the independent lines of text
 write.table(diameterTemp,
             file = outFile,
@@ -378,3 +405,4 @@ lapply(1:length(dia_list), function(i) write.table(dia_list[[i]],
                                                    append = T,
                                                    quote = F,
                                                    col.names = F))
+
