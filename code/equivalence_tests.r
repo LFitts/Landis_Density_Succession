@@ -51,9 +51,9 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 plt_list <- read.csv('code/WI_PLOT_FILTERED.csv')
 #plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_'))
 #'
-plt_list1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_'))
-plt_list2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_'))
-plt_list <- rbind(plt_list1, plt_list2)
+plt_list1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_')) # change this when working with other subplots
+plt_list2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_')) # change this when working with other subplots
+plt_list <- rbind(plt_list1, plt_list2) # this is only needed when working with more than one subset of subplots, in this case s1+s2
 #'
 #'
 #' Create a column for difference in time (tf-to)/time step in LANDIS-II
@@ -150,7 +150,7 @@ FIA_DB<-FIA_DB %>%
 #Read in LANDIS-II density log
 #'
 #density<-read.csv("simulations/s2/Density_cohort_log_s2.CSV")
-density<-read.csv("simulations/s1_s2/Density_cohort_log_s1s2.CSV") ### make sure to change these when testing different subplots
+density<-read.csv("simulations/s1_s2/Density_cohort_log_s1s2_0.25.CSV") ### make sure to change these when testing different subplots
 #'
 #' Read the initial communities map codes (will be the SUBKEY)
 #' 
@@ -228,7 +228,7 @@ s2_species_wide_SUB<-s2_species_wide_SUB[complete.cases(s2_species_wide_SUB),]
 #'
 #' Add the ecological section to it
 #' 
-s2_species_wide_SUB<-s2_species_wide_SUB %>% left_join(map_codes %>% dplyr::select(SUBKEY, ECO_PROVINCE), by="SUBKEY")
+#s2_species_wide_SUB<-s2_species_wide_SUB %>% left_join(map_codes %>% dplyr::select(SUBKEY, ECO_PROVINCE), by="SUBKEY")
 #'
 #write.csv(s2_species_wide_SUB, 'output/s1s2_species_wide_sub.CSV')
 #'
@@ -435,7 +435,7 @@ for(i in 1:length(species_vec)){
   tost_sp_result_BA[[tempkey]] <- tostTest
   }
 #'
-#write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/Landis_Density_Succession/simulations/s2/results/tost_sp_ba_result0.5.CSV')
+#write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s1_s2/results/tost_sp_ba_result_0.25.CSV')
 #'
 
 
