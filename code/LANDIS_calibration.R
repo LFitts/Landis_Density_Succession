@@ -242,11 +242,11 @@ for(i in 1:length(sp_eco_listWI)){
     }
     
     growth <- diaGR[[1,1]]
-    if (spCD %in% smallDiaSlow)
+    if (spCD %in% largeDiaSlow)
     {
       growth <- growth - (growth * growMod)  
     }
-    else if (spCD %in% smallDiaBoost)
+    else if (spCD %in% largeDiaBoost)
     {
       growth <- growth + (growth * growMod)  
     }
