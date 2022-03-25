@@ -526,3 +526,64 @@ test <- test %>% mutate(CF = case_when(
                         TRUE ~ NA_real_))
 
 test <- test %>% mutate(ST_2 = ST_1 * CF)
+
+#----Initial condition equivalence test----
+density_adj <- read_csv("simulations/s1_s2/Density_cohort_log_adjusted.CSV") ### make sure to change these when testing different subplots
+density_bas <- read_csv("simulations/s1_s2/Density_cohort_log_base.CSV")
+
+density_adj <- density_adj %>% dplyr::select(SiteIndex, Time, Species, EcoName, Age, TreeNumber, Diameter) %>% 
+    mutate(BA_m2=(pi*((Diameter/2)*0.01)^2*TreeNumber))
+
+density_bas <- density_bas %>% dplyr::select(SiteIndex, Time, Species, EcoName, Age, TreeNumber, Diameter) %>% 
+  mutate(BA_m2=(pi*((Diameter/2)*0.01)^2*TreeNumber))
+
+initial_spc_adj <- density_adj %>% group_by(EcoName, SiteIndex, Time, Species)%>%
+  summarize(meanDIA=sum(Diameter*TreeNumber, na.rm=T)/sum(TreeNumber, na.rm = T),
+            totalBA=sum(BA_m2, na.rm=T),
+            density=sum(TreeNumber, na.rm=T))
+
+initial_spc_bas <- density_bas %>% group_by(EcoName, SiteIndex, Time, Species)%>%
+  summarize(meanDIA=sum(Diameter*TreeNumber, na.rm=T)/sum(TreeNumber, na.rm = T),
+            totalBA=sum(BA_m2, na.rm=T),
+            density=sum(TreeNumber, na.rm=T))
+
+initial_comp <- initial_spc_bas %>% filter(Time == 0) %>% 
+  left_join(initial_spc_adj %>% filter(Time == 0), by = c('EcoName', 'SiteIndex', 'Species'), suffix = c('_bas', '_adj'))
+
+ggplot(initial_comp %>% filter(Species == 'abiebals'), aes(x=meanDIA_bas, y=meanDIA_adj)) +
+  geom_point() +
+  coord_fixed() +
+  geom_abline(slope = 1, intercept = 0) +
+  facet_wrap(vars(EcoName))
+
+initial_comp <- initial_comp %>% filter(!(Species %in% c("s_tohard", "s_inhard", "l_tohard", "l_inhard", "l_inconi", "l_toconi") ))
+species_vec<-unique(initial_comp$Species)
+sp_result_BA <- tibble()
+tost_sp_result_BA <- list()
+#'
+for(i in 1:length(species_vec)){
+  tempkey=species_vec[i]
+  species<-initial_comp %>% filter(Species==tempkey)
+  #
+  tostTest <- dataTOSTpaired(species, pair1 ='totalBA_bas', pair2 = 'totalBA_adj',
+                             low_eqbound = -0.1, high_eqbound = 0.1, desc=T, plots=T)
+  
+  result <- tibble(Species = tempkey,
+                   EPSILON = 0.5,
+                   p0 = tostTest$tost$asDF[1,'p'],
+                   p1 = tostTest$tost$asDF[2,'p'],
+                   p2 = tostTest$tost$asDF[3,'p'],
+                   Base_MEAN = tostTest$desc$asDF[1,'m'],
+                   Adjusted_MEAN = tostTest$desc$asDF[2,'m'], 
+                   MEAN_BIAS = mean(species$totalBA_bas-species$totalBA_adj),
+                   SD_BIAS = sd(species$totalBA_bas-species$totalBA_adj),
+                   N= length(species$totalBA_bas)) %>% 
+    mutate(NULLHYP = if_else((p1 < 0.05) & (p2 < 0.05), 'REJECTED', 'NOT REJECTED'))
+  
+    #tostTest$indplot
+  
+  sp_result_BA <- sp_result_BA %>% bind_rows(result)
+  
+  tost_sp_result_BA[[tempkey]] <- tostTest
+}
+
