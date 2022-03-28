@@ -39,7 +39,7 @@ species_codes<-species_attributes%>% select(SPCD, Name)
 #' 
 #' Point to directory containing FIA tables
 #'
-fiaDir <- 'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/data/main_WI_2020'
+fiaDir <- 'D:/fia/rFIA'
 #fiaDir <- 'D:/fia/rFIA'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
@@ -180,7 +180,6 @@ for(i in 1:length(sp_eco_listWI)){
   #    growth <- growth + (growth * growMod)  
   #  }
   #  
-   smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
     if (spCD %in% abiebals_smallDiaSlow)
     {
       growth <- growth - (growth * growMod_0.60)  
@@ -209,6 +208,8 @@ for(i in 1:length(sp_eco_listWI)){
     {
       growth <- growth + (growth * growMod_2.55)  
     } 
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
+    
   }
   #'
   #' Now for the trees >=5"
@@ -758,7 +759,7 @@ species_codes<-species_attributes%>% select(SPCD, Name)
 #' 
 #' Point to directory containing FIA tables
 #'
-fiaDir <- 'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/data/main_WI_2020'
+fiaDir <- 'D:/fia/rFIA/'
 #fiaDir <- 'D:/fia/rFIA'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
@@ -899,7 +900,6 @@ for(i in 1:length(sp_eco_listWI)){
     #    growth <- growth + (growth * growMod)  
     #  }
     #  
-    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
     if (spCD %in% abiebals_smallDiaSlow)
     {
       growth <- growth - (growth * growMod_0.65)  
@@ -928,7 +928,9 @@ for(i in 1:length(sp_eco_listWI)){
     {
       growth <- growth + (growth * growMod_3.0)  
     }
-      }
+    smallGrowthMD <- bind_rows(smallGrowthMD, tibble(KEY=tempkey,AGE = age, DIA = max(smallGrowthMD$DIA) + growth))
+    
+  }
   #'
   #' Now for the trees >=5"
   #' 
@@ -1176,14 +1178,14 @@ spcNames <- species_codes %>%
   select(Name) %>% pull()
 
 #diameterTemp <- read.table('all_txt/Ecoregion_diameter_table.txt', skip = 4, col.names = c('Ecoregion', 'Species', 'Age', 'Diameter'), sep=" ")
-diameterTemp <- read.table('simulations/s3/Ecoregion_diameter_table.txt', skip = 4, col.names = c('Ecoregion', 'Species', 'Age', 'Diameter'), sep=" ")
+diameterTemp <- read.table('all_txt/Ecoregion_diameter_table.txt', skip = 4, col.names = c('Ecoregion', 'Species', 'Age', 'Diameter'), sep=" ")
 diameterTemp <- diameterTemp %>% filter(!(Species %in% spcNames))
 
 #'
 #'
 #' Now write the ecoregion parameters density text file:    
 #outFile <- paste0("all_txt/Ecoregion_diameter_table_", growMod, ".txt")
-outFile <- paste0("simulations/s3/Ecoregion_diameter_table_", "phase4_LOW",".txt")
+outFile <- paste0("all_txt/Ecoregion_diameter_table_", "adjusted",".txt")
 writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = outFile) #creates the independent lines of text
 write.table(diameterTemp,
             file = outFile,
