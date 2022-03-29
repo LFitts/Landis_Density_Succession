@@ -6,7 +6,7 @@ Species	species.txt
 
 
 Ecoregions	ecoregions.txt
-EcoregionsMap	ecoregion.img
+EcoregionsMap	ecoregion_orig.img
 
 
 CellLength	12.97
@@ -23,7 +23,7 @@ CellLength	12.97
 
 >> Disturbance Extensions	Initialization File
 >> --------------------	-------------------
-   "Land Use Change"	"land-use.txt"
+   "Land Use Change"	"land-use_adjusted.txt"
 
 
 >> Output Extensions	Initialization File
