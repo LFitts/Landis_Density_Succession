@@ -5,7 +5,7 @@ LandisData	Species
 poputrem 400 20 1 2 1 1 0 0 0 none
 acerrubr 400 15 3 1 1 1 0 0 0 none
 acersacc 400 60 5 1 1 1 0 0 0 none
-abiebals 400 30 5 1 1 1 0 0 0 none
+abiebals 600 30 5 1 1 1 0 0 0 none
 pinuresi 400 55 2 4 1 1 0 0 0 none
 thujocci 400 30 4 1 1 1 0 0 0 none
 betupapy 400 40 2 2 1 1 0 0 0 none
