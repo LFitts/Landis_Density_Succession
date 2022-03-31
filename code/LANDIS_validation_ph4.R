@@ -91,10 +91,10 @@ temp<-wiTB$TREE %>% merge(wi.sp, by='PLT_CN')%>%
   filter(STATUSCD == 1) #merge the tree table with the ecoregion and only keep live trees
 #
 maxtable<-temp%>% group_by(ECO_PROVINCE,SPCD)%>% #create the max diameter table by species-ecoregion
-  summarise(max_dia=max(DIA, na.rm=T))%>%
+  summarise(max_dia=max(DIA, na.rm=T), DIA_P95 = quantile(DIA, c(0.95), na.rm=T), DIA_P99 = quantile(DIA, c(0.99), na.rm=T)) %>%
   mutate(KEY=paste(ECO_PROVINCE,SPCD, sep="_"))#%>% na.omit()#%>%#create the identifier here as well
 
-colnames(species_codes) = c('SPCD', 'Name')
+
 #'
 #' Create the empty data frames needed for the loop
 #' 
@@ -211,7 +211,7 @@ for(i in 1:length(sp_eco_listWI)){
   workingTB$DIA_GROW<-ifelse(is.na(workingTB$DIA_GROW),0.04,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
   #'
-  while(max(growthMD$DIA) < maxtable$max_dia[which(maxtable$KEY==tempkey)]){
+  while(max(growthMD$DIA) < maxtable$DIA_P99[which(maxtable$KEY==tempkey)]){
     if (max(growthMD$DIA) < min(workingTB$sizeClass, na.rm = T))
     {
       diaGR <- subTB %>% slice(1)
@@ -228,12 +228,12 @@ for(i in 1:length(sp_eco_listWI)){
     }
     else if (spCD %in% pinubank_largeDiaSlow)
     {
-      growth <- growth - (growth * growMod_0.90)  
+      growth <- growth - (growth * growMod_0.55)  
     }
-    else if (spCD %in% poputrem_largeDiaSlow)
-    {
-      growth <- growth - (growth * growMod_0.70)  
-    }   
+    #else if (spCD %in% poputrem_largeDiaSlow)
+    #{
+    #  growth <- growth - (growth * growMod_0.70)  
+    #}   
     else if (spCD %in% queralba_largeDiaBoost)
     {
       growth <- growth + (growth * growMod_3.0)  
@@ -273,7 +273,7 @@ ecoSp <- expand.grid(unique(wiTB$PLOT$ECO_PROVINCE), unique(c(abiebals_smallDiaS
 msngEcoSP <- ecoSp %>% filter(!(SPECOKEY %in% names(dia_list)))
 
 maxtable.state <- wiTB$TREE %>% filter(STATUSCD == 1) %>%  group_by(SPCD) %>% #create the max diameter table by species-ecoregion
-  summarise(max_dia=max(DIA, na.rm=T))
+  summarise(max_dia=max(DIA, na.rm=T), DIA_P95 = quantile(DIA, c(0.95), na.rm=T), DIA_P99 = quantile(DIA, c(0.99), na.rm=T))
 
 dg.summ.state <- wi.tg %>% group_by(SPCD, sizeClass) %>% summarise(DIA_GROW = mean(DIA_GROW, na.rm=T))%>% na.omit() #get the mean diameter growth and omit the na values (rows with no data for diameter growth)
 
@@ -360,7 +360,7 @@ for(i in 1:nrow(msngEcoSP)){
   workingTB$DIA_GROW<-ifelse(is.na(workingTB$DIA_GROW),0.04,workingTB$DIA_GROW) #replace the zeros and negative values with a very very low number
   
   #'
-  while(max(growthMD$DIA) < maxtable.state$max_dia[which(maxtable.state$SPCD==spcd)]){
+  while(max(growthMD$DIA) < maxtable.state$DIA_P99[which(maxtable.state$SPCD==spcd)]){
     if (max(growthMD$DIA) < min(workingTB$sizeClass, na.rm = T))
     {
       diaGR <- subTB %>% slice(1)
@@ -377,12 +377,12 @@ for(i in 1:nrow(msngEcoSP)){
     }
     else if (spCD %in% pinubank_largeDiaSlow)
     {
-      growth <- growth - (growth * growMod_0.90)  
+      growth <- growth - (growth * growMod_0.55)  
     }
-    else if (spCD %in% poputrem_largeDiaSlow)
-    {
-      growth <- growth - (growth * growMod_0.70)  
-    }   
+    #else if (spCD %in% poputrem_largeDiaSlow)
+    #{
+    #  growth <- growth - (growth * growMod_0.70)  
+    #}   
     else if (spCD %in% queralba_largeDiaBoost)
     {
       growth <- growth + (growth * growMod_3.0)  
@@ -429,7 +429,7 @@ diameterTemp <- diameterTemp %>% filter(!(Species %in% spcNames))
 #'
 #' Now write the ecoregion parameters density text file:    
 #outFile <- paste0("all_txt/Ecoregion_diameter_table_", growMod, ".txt")
-outFile <- paste0("all_txt/Ecoregion_diameter_table_", "adjusted2",".txt")
+outFile <- paste0("all_txt/Ecoregion_diameter_table_", "P99",".txt")
 writeLines(c(paste("LandisData", "EcoregionDiameterTable", sep="\t"),"\n",paste(">>Ecoregion", "Species", "Age", "Diameter", sep="\t")), con = outFile) #creates the independent lines of text
 write.table(diameterTemp,
             file = outFile,
@@ -590,11 +590,12 @@ FIA_DB<-FIA_DB %>%
 #Read in LANDIS-II density log
 #'
 #density<-read.csv("simulations/s2/Density_cohort_log_s2.CSV")
-density<-read.csv("simulations/s3/Density_cohort_log_s3_validation_low.CSV") ### make sure to change these when testing different subplots
+#density<-read.csv("simulations/s3/Density_cohort_log_s3_validation_low.CSV") ### make sure to change these when testing different subplots
+density<-read.csv("simulations/s3_s4/Density_cohort_log_P99.csv")
 #'
 #' Read the initial communities map codes (will be the SUBKEY)
 #' 
-map_codes<-read.csv("simulations/s3/output/MAPVALUE_KEY.CSV")
+map_codes<-read.csv("simulations/s3_s4/output/MAPVALUE_KEY_P99.CSV")
 #' Get a SUBKEY removing INVYR
 p<-str_split(map_codes$PLT_KEY, '_', simplify=T)
 map_codes <- map_codes %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
@@ -668,16 +669,16 @@ for(i in 1:length(species_vec)){
   tempkey=species_vec[i]
   species<-s3_species_wide_SUB %>% filter(Species==tempkey)
   #
-  tostTest <- dataTOSTpaired(species, pairs = list(c(i1='totalBA_LANDIS', i2='totalBA_FIA')),
+  tostTest <- dataTOSTpaired(species, pair1 = 'totalBA_LANDIS', pair2 = 'totalBA_FIA',
                              low_eqbound = -0.5, high_eqbound = 0.5, desc=T, plots=T)
   
   result <- tibble(ECO_PROVINCE = tempkey,
                    EPSILON = 0.5,
-                   p0 = tostTest$tost$asDF$`p[0]`,
-                   p1 = tostTest$tost$asDF$`p[1]`,
-                   p2 = tostTest$tost$asDF$`p[2]`,
-                   LANDIS_MEAN = tostTest$desc$asDF$`m[1]`,
-                   FIA_MEAN = tostTest$desc$asDF$`m[2]`, 
+                   p0 = tostTest$tost$asDF[1,'p'],
+                   p1 = tostTest$tost$asDF[2,'p'],
+                   p2 = tostTest$tost$asDF[3,'p'],
+                   LANDIS_MEAN = tostTest$desc$asDF[1,'m'],
+                   FIA_MEAN = tostTest$desc$asDF[2,'m'], 
                    MEAN_BIAS = mean(species$totalBA_FIA-species$totalBA_LANDIS),
                    SD_BIAS = sd(species$totalBA_FIA-species$totalBA_LANDIS),
                    N= length(species$totalBA_FIA)) %>% 

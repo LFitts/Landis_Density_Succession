@@ -93,8 +93,8 @@ species_codes<-species_attributes%>% select(SPCD, Name)
 #' 
 #' Point to directory containing FIA tables
 #'
-fiaDir <- 'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/data/main_WI_2020'
-#fiaDir <- 'D:/fia/rFIA'
+#fiaDir <- 'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/data/main_WI_2020'
+fiaDir <- 'D:/fia/rFIA'
 #getFIA(states = "WI", dir = fiaDir, load = FALSE, nCores=3) #download the FIA tables for Wisconsin
 #'
 wiTB <- readFIA(fiaDir, states = c('WI'), tables=c("COND", "COND_DWM_CALC", "INVASIVE_SUBPLOT_SPP", "P2VEG_SUBP_STRUCTURE", "PLOT", "POP_ESTN_UNIT","POP_EVAL", "POP_EVAL_GRP", "POP_EVAL_TYP", "POP_PLOT_STRATUM_ASSGN", "POP_STRATUM", "SEEDLING", "SUBP_COND", "SUBP_COND_CHNG_MTRX", "SUBPLOT", "SURVEY", "TREE", "TREE_GRM_BEGIN", "TREE_GRM_COMPONENT", "TREE_GRM_MIDPT"), inMemory = T, nCores = 3)%>% clipFIA() #These are the minimum FIA tables that we need for this exercise
@@ -136,6 +136,11 @@ wiTB$PLOT$ECO_PROVINCE<-substr(wiTB$PLOT$ECOSUBCD, start=2, stop=5) #Create the 
 wiVR <- vitalRates(wiTB, bySpecies = T, bySizeClass = T, treeType = 'live', grpBy=(ECO_PROVINCE))
 wiVR <- wiVR %>% filter(SPCD %in% spcds)
 wiVR$KEY<-paste(wiVR$ECO_PROVINCE,wiVR$SPCD, sep="_") #create an identifier (KEY) column for later referencing in the loop (each species-ecoregion)
+
+#' Find diameter quantiles
+#' 
+diam_summ <- wiTB$TREE %>% ungroup() %>% filter(DIA >= 5.0) %>% group_by(SPCD) %>%
+  summarise(MAXDIA = max(DIA), DIA_P95 = quantile(DIA, c(0.95)), DIA_P99 = quantile(DIA, c(0.99)))
 #'
 #'
 #'

@@ -161,18 +161,30 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('simulations/s3_s4/Ecoregion_diameter_table_adjusted2.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER')) ##########update subplots when needed
+    landGrow <- read.table('simulations/s3_s4/Ecoregion_diameter_table_P99.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER')) ##########update subplots when needed
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
-  {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  {
+    cohort_age <- (min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))
+    return(min(cohort_age, 400))  
+  }
   if (diameter >= max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
-  {return(max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  {
+    cohort_age <- (max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))
+    return(min(cohort_age, 400))
+  }
   minAgeClass <- abs(diameter - landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'DIAMETER']) 
   maxAgeClass <- abs(diameter - landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'DIAMETER'])
   if (minAgeClass <= maxAgeClass) 
-  {return(landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'AGE'])}
+  {
+    cohort_age <- (landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'AGE'])
+    return(min(cohort_age, 400))
+  }
   else 
-  {return(landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'AGE'])}
+  {
+    cohort_age <- (landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'AGE'])
+    return(min(cohort_age, 400))
+  }
 }
 #'
 #' Loop through conditions and subplots
@@ -180,11 +192,11 @@ ageClass <- function(ecoregion, spcd, diameter)
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
 plt_exist <- plt_list %>% dplyr::filter(SUBKEY %in% unique(WI_TREE$SUBKEY))
-landGrow <- read.table('simulations/s3_s4/Ecoregion_diameter_table_adjusted2.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER')) ###########update subplot location when needed
+landGrow <- read.table('simulations/s3_s4/Ecoregion_diameter_table_P99.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER')) ###########update subplot location when needed
 #'
 MV_KEY <- data.frame()
 PLOTMAPVALUE <- 1
-outFile = file('simulations/s3_s4/Initial_Community_adjusted2.txt', 'w') ###### update output location when needed
+outFile = file('simulations/s3_s4/Initial_Community_P99.txt', 'w') ###### update output location when needed
 cat('LandisData "Initial Communities"\n', file=outFile, sep='\n')
 for (i in 1:nrow(plt_exist))
 {
@@ -222,13 +234,13 @@ for (i in 1:nrow(plt_exist))
 #'  
 }
 close(outFile)
-write_csv(MV_KEY, 'simulations/s3_s4/output/MAPVALUE_KEY_adjusted2.csv') ###########update output when needed
+write_csv(MV_KEY, 'simulations/s3_s4/output/MAPVALUE_KEY_P99.csv') ###########update output when needed
 #' 
 #' ##################################################################################
 # 2. Maps: Subplots with ecoregions ----
 #'################################################################################### 
 #'
-MV_KEY<-read_csv('simulations/s3_s4/output/MAPVALUE_KEY_adjusted2.csv') ################update subplot location
+MV_KEY<-read_csv('simulations/s3_s4/output/MAPVALUE_KEY_P99.csv') ################update subplot location
 #' Merge the plot list database with the ecological province variable:
 #'
 WI_PLOT$ECO_PROVINCE<-substr(WI_PLOT$ECOSUBCD, start=2, stop=5) #Leave only the strings that correspond to the ecological province (from 2 to 5). Note that there is a blank space at the beginning of the ECOSUBCD column from the FIA database
@@ -266,18 +278,18 @@ initial_communities_map[1:max(MV_KEY$MAPVALUE)] <- MV_KEY$MAPVALUE
 ecoregion_map[1:nrow(MV_KEY)] <- MV_KEY$Map_code_ecoregion
 #
 #' Save the files
-writeRaster(ecoregion_map, "simulations/s3_s4/ecoregion_adjusted2.img", NAflag=-9999, overwrite=T, datatype='INT2S') ############update output location
+writeRaster(ecoregion_map, "simulations/s3_s4/ecoregion_P99.img", NAflag=-9999, overwrite=T, datatype='INT2S') ############update output location
 #'
 #plot(ecoregion_map)
 #'
-writeRaster(initial_communities_map, "simulations/s3_s4/initialcommunity_adjusted2.img", NAflag=-9999, overwrite=T, datatype='INT2S') ############## update output location
+writeRaster(initial_communities_map, "simulations/s3_s4/initialcommunity_P99.img", NAflag=-9999, overwrite=T, datatype='INT2S') ############## update output location
 
 #'
 #' ##################################################################################
 # 3. Create table: Land use ----
 #'###################################################################################
 #' Read in initial communities key
-MV_KEY<-read.csv('simulations/s3_s4/output/MAPVALUE_KEY_adjusted2.csv') ############# update subplot location
+MV_KEY<-read.csv('simulations/s3_s4/output/MAPVALUE_KEY_P99.csv') ############# update subplot location
 MV_KEY <- MV_KEY %>% rowwise() %>% mutate(KEY = paste(str_split(PLT_KEY, '_', simplify=T)[,1:3], collapse='_'))
 MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
 #'
@@ -429,31 +441,43 @@ ageClass <- function(ecoregion, spcd, diameter)
   }
   if (!exists('landGrow'))
   {
-    landGrow <- read.table('simulatios/s3_s4/Ecoregion_diameter_table_adjusted2.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))  ############ update subplot location
+    landGrow <- read.table('simulatios/s3_s4/Ecoregion_diameter_table_P99.txt', skip=4, col.names=c('ECOREGION','SPECIES','AGE','DIAMETER'))  ############ update subplot location
   }
   if (diameter <= min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
-  {return(min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  {
+    cohort_age <- (min(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))
+    return(min(cohort_age, 400))  
+  }
   if (diameter >= max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER']))
-  {return(max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))}
+  {
+    cohort_age <- (max(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'AGE']))
+    return(min(cohort_age, 400))
+  }
   minAgeClass <- abs(diameter - landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'DIAMETER']) 
   maxAgeClass <- abs(diameter - landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'DIAMETER'])
   if (minAgeClass <= maxAgeClass) 
-  {return(landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'AGE'])}
+  {
+    cohort_age <- (landGrow[min(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] >= diameter)), 'AGE'])
+    return(min(cohort_age, 400))
+  }
   else 
-  {return(landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'AGE'])}
+  {
+    cohort_age <- (landGrow[max(which(landGrow[(landGrow$SPECIES == spcd) & (landGrow$ECOREGION == ecoregion), 'DIAMETER'] <= diameter)), 'AGE'])
+    return(min(cohort_age, 400))
+  }
 }
 #'
 #' Loop through conditions and subplots
 #' Assign each tree in a subplot to an age cohort
 #' Write age cohort and number of trees out to LANDIS initial community file
 #' 
-outFile <-  file('simulations/s3_s4/land-use_adjusted2.txt', 'w') ############### update output
+outFile <-  file('simulations/s3_s4/land-use_P99.txt', 'w') ############### update output
 #'
 #'
 cat('LandisData   "Land Use"',
     '',
     'Timestep    1',
-    'InputMaps	landuse-adjusted2-{timestep}.img',
+    'InputMaps	landuse-P99-{timestep}.img',
     'SiteLog		output/land-use/site-log.csv',
     '',
     '>>------------------------------------',
@@ -522,11 +546,11 @@ for (ts in unique(land_use_change$TIME_STEP)[order(unique(land_use_change$TIME_S
 }
 
 close(outFile)
-write_csv(luKEY, 'simulations/s3_s4/output/landuse_key_adjusted2.csv') ################# update output
+write_csv(luKEY, 'simulations/s3_s4/output/landuse_key_P99.csv') ################# update output
 #'
 #' Create land-use maps
 #' 
-MV_KEY <- read_csv('simulations/s3_s4/output/MAPVALUE_KEY_adjusted2.csv') ###############update subplot
+MV_KEY <- read_csv('simulations/s3_s4/output/MAPVALUE_KEY_P99.csv') ###############update subplot
 MV_KEY <- MV_KEY %>% rowwise() %>% mutate(KEY = paste(str_split(PLT_KEY, '_', simplify=T)[,1:3], collapse='_'))
 MV_KEY <- MV_KEY %>% mutate(SUBKEY = str_c(KEY, '_', str_split(PLT_KEY, '_', simplify=T)[,5]))
 #'
@@ -546,7 +570,7 @@ lu_map <- raster(ncol=100, nrow=100, xmn=0,xmx=1297,ymn=0,ymx=1297,vals=0) #crea
 #"
 for (ts in 0:20)
 {
-  writeRaster(lu_map, paste0("simulations/s3_s4/landuse-adjusted2", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S') ################## update output
+  writeRaster(lu_map, paste0("simulations/s3_s4/landuse-P99-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S') ################## update output
 }
 
 for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
@@ -555,7 +579,7 @@ for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
   sub_map <- lu_map 
   sub_map[sub_lu$MAPVALUE] <- sub_lu$LUMAPCODE
   
-  writeRaster(sub_map, paste0("simulations/s3_s4/landuse-adjusted2", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S') ############ update output location
+  writeRaster(sub_map, paste0("simulations/s3_s4/landuse-P99-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S') ############ update output location
 }
 
 #
