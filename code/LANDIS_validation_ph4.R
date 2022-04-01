@@ -452,6 +452,9 @@ library(tidyverse)
 #install.packages("TOSTER")
 library(TOSTER)
 
+MV_KEY <- read_csv('simulations/s3_s4/output/MAPVALUE_KEY_P99.csv')
+MV_KEY <- MV_KEY %>% rowwise() %>% mutate(SUBKEY = paste(str_split(PLT_KEY, '_', simplify=T)[,c(1,2,3,5)], collapse='_'))
+
 #' #################################################
 # Prepare the FIA table for validation ####
 #'
@@ -497,7 +500,16 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 #' Read in the list of subplots run for the initial communities
 #' Read in the plot list that meet the F/M condition & at least 3 remeasurements
 plt_list <- read.csv('code/WI_PLOT_FILTERED.csv')
-plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 3, 3), sep='_'))
+plt_list_s3 <- plt_list %>% 
+  mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 3, 3), sep='_')) %>% #Change the subplot list subplot for every run
+  dplyr::filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
+#'
+plt_list_s4<- plt_list %>% 
+  mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 4, 4), sep='_')) %>% #Change the subplot list subplot for every run
+  dplyr::filter(SUBKEY %in% unique(MV_KEY$SUBKEY))
+#'
+plt_list<-rbind(plt_list_s3,plt_list_s4) 
+
 #'
 #' Create a column for difference in time (tf-to)/time step in LANDIS-II
 #' 
@@ -688,6 +700,9 @@ for(i in 1:length(species_vec)){
   
   tost_sp_result_BA[[tempkey]] <- tostTest
 }
+
+write.table(sp_result_BA, 'clipboard', sep = '\t', row.names = F)
+
 #'
 #write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3/results/tost_sp_ba_result_phase4_low.CSV')
 #'
