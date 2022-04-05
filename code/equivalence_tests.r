@@ -7,8 +7,8 @@ library(TOSTER)
 #' #################################################
 # Prepare the FIA table for validation ####
 #'
-WI_TREE<-read_csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
-WI_PLOT<-read_csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
+WI_TREE<-read.csv("data/main_WI_2020/WI_TREE.csv")#read the tree table
+WI_PLOT<-read.csv("data/main_WI_2020/WI_PLOT.csv")#read the plot table
 WI_TREE <- WI_TREE %>% filter(INVYR >= 2000 & STATUSCD==1)
 #
 WI_TREE <- WI_TREE %>% mutate(TREE_CN = as.character(CN), PLT_CN = as.character(PLT_CN), PREV_TRE_CN = as.character(PREV_TRE_CN))
@@ -51,8 +51,8 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 plt_list <- read.csv('code/WI_PLOT_FILTERED.csv')
 #plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_'))
 #'
-plt_list1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 1, 1), sep='_')) # change this when working with other subplots
-plt_list2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 2, 2), sep='_')) # change this when working with other subplots
+plt_list1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 3, 3), sep='_')) # change this when working with other subplots
+plt_list2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, str_sub(subplot_list, 4, 4), sep='_')) # change this when working with other subplots
 plt_list <- rbind(plt_list1, plt_list2) # this is only needed when working with more than one subset of subplots, in this case s1+s2
 #'
 #'
@@ -150,11 +150,11 @@ FIA_DB<-FIA_DB %>%
 #Read in LANDIS-II density log
 #'
 #density<-read.csv("simulations/s2/Density_cohort_log_s2.CSV")
-density<-read.csv("simulations/s1_s2/Density_cohort_log_s1s2_0.25.CSV") ### make sure to change these when testing different subplots
+density<-read.csv("simulations/s3_s4/Density_cohort_log_P99.CSV") ### make sure to change these when testing different subplots
 #'
 #' Read the initial communities map codes (will be the SUBKEY)
 #' 
-map_codes<-read.csv("simulations/s1_s2/output/MAPVALUE_KEY.CSV")
+map_codes<-read.csv("simulations/s3_s4/output/MAPVALUE_KEY_P99.CSV")
 #' Get a SUBKEY removing INVYR
 p<-str_split(map_codes$PLT_KEY, '_', simplify=T)
 map_codes <- map_codes %>% mutate(SUBKEY = str_c(p[,1],'_',p[,2],'_', p[,3],'_',p[,5]))
@@ -366,11 +366,11 @@ for(i in 1:length(species_vec)){
   
   sp_result_DIA <-  sp_result_DIA %>% bind_rows(result)
   
-  tost_eco_result_BA[[tempkey]] <- tostTest
+  tost_sp_result_DIA[[tempkey]] <- tostTest
 }
 
 #'
-#write.csv( sp_result_DIA,'C:/Users/fitts010/Desktop/Landis_Density_Succession/simulations/s2/results/tost_sp_dia_result0.5.CSV')
+#write.csv( sp_result_DIA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3_s4/results/tost_sp_dia_result_P99.CSV')
 #'
 # Equivalence test SPECIES density ####
 #'
@@ -402,7 +402,7 @@ for(i in 1:length(species_vec)){
   
   tost_sp_result_D[[tempkey]] <- tostTest
 }
-#write.csv(sp_result_D,'C:/Users/fitts010/Desktop/Landis_Density_Succession/simulations/s2/results/tost_sp_density_result0.5.CSV')
+#write.csv(sp_result_D,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3_s4/results/tost_sp_density_result_P99.CSV')
 #'
 #'
 # Equivalence test SPECIES total basal area ####
@@ -435,7 +435,7 @@ for(i in 1:length(species_vec)){
   tost_sp_result_BA[[tempkey]] <- tostTest
   }
 #'
-#write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s1_s2/results/tost_sp_ba_result_0.25.CSV')
+#write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3_s4/results/tost_sp_ba_result_P99.CSV')
 #'
 
 

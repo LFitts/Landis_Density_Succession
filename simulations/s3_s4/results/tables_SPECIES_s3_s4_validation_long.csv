@@ -1,71 +1,71 @@
-SPCD,Common_name,Scientific_name,SPECIES,N,Mean_LANDIS,Mean_FIA,Mean_bias,SD_bias,TOST,Source,Shade_tolerance,Type
-12,balsam fir,Abies balsamea,abiebals,1149,0.3372,0.1168,-0.2204,0.2159,Not equivalent,Original,5,Conifer
-313,boxelder,Acer negundo,acernegu,159,0.1643,0.1133,-0.0511,0.1489,Equivalent,Original,3,Hardwood
-316,red maple,Acer rubrum,acerrubr,1931,0.16,0.1437,-0.0163,0.1439,Equivalent,Original,3,Hardwood
-318,sugar maple,Acer saccharum,acersacc,1821,0.1696,0.182,0.0124,0.1469,Equivalent,Original,5,Hardwood
-371,yellow birch,Betula alleghaniensis,betualle,324,0.0948,0.1036,0.0088,0.094,Equivalent,Original,3,Hardwood
-375,paper birch,Betula papyrifera,betupapy,468,0.1261,0.0889,-0.0372,0.1067,Equivalent,Original,2,Hardwood
-402,bitternut hickory,Carya cordiformis,carycord,191,0.1107,0.1144,0.0037,0.1204,Equivalent,Original,2,Hardwood
-407,shagbark hickory,Carya ovata,caryovat,168,0.1004,0.1002,-0.0001,0.1011,Equivalent,Original,3,Hardwood
-541,white ash,Fraxinus americana,fraxamer,367,0.1316,0.0993,-0.0323,0.1293,Equivalent,Original,4,Hardwood
-543,black ash,Fraxinus nigra,fraxnigr,651,0.1587,0.1505,-0.0081,0.1262,Equivalent,Original,4,Hardwood
-544,green ash,Fraxinus pennsylvanica,fraxpenn,253,0.1543,0.1195,-0.0349,0.1549,Equivalent,Original,3,Hardwood
-99994,L-I-C,L_Intolerant conifer,l_inconi,35,0.1675,0.103,-0.0644,0.1159,Not equivalent,Original,2,Conifer
-99993,L-I-H,L_Intolerant hardwood,l_inhard,22,0.2394,0.2231,-0.0163,0.2135,Equivalent,Original,1,Hardwood
-99991,L-T-H,L_Tolerant hardwood,l_tohard,91,0.1065,0.0898,-0.0167,0.0948,Equivalent,Original,4,Hardwood
-71,tamarack (native),Larix laricina,larilari,236,0.1763,0.1689,-0.0073,0.16,Equivalent,Original,1,Conifer
-701,eastern hophornbeam,Ostrya virginiana,ostrvirg,660,0.1672,0.0541,-0.1131,0.1125,Not equivalent,Original,4,Hardwood
-94,white spruce,Picea glauca,piceglau,196,0.1717,0.1177,-0.054,0.1461,Equivalent,Original,4,Conifer
-95,black spruce,Picea mariana,picemari,320,0.2456,0.1485,-0.0972,0.1478,Not equivalent,Original,3,Conifer
-105,jack pine,Pinus banksiana,pinubank,200,0.2946,0.1655,-0.1291,0.2168,Not equivalent,Original,1,Conifer
-125,red pine,Pinus resinosa,pinuresi,379,0.2879,0.3501,0.0622,0.1918,Equivalent,Original,2,Conifer
-129,eastern white pine,Pinus strobus,pinustro,522,0.2132,0.2211,0.0078,0.1975,Equivalent,Original,3,Conifer
-743,bigtooth aspen,Populus grandidentata,popugran,319,0.2311,0.171,-0.0601,0.2073,Equivalent,Original,1,Hardwood
-746,quaking aspen,Populus tremuloides,poputrem,1104,0.3375,0.1824,-0.1551,0.2324,Not equivalent,Original,1,Hardwood
-762,black cherry,Prunus serotina,prunsero,565,0.1132,0.0673,-0.0459,0.108,Equivalent,Original,3,Hardwood
-802,white oak,Quercus alba,queralba,365,0.0722,0.1506,0.0784,0.123,Not equivalent,Original,3,Hardwood
-809,northern pin oak,Quercus ellipsoidalis,querelli,296,0.1566,0.1377,-0.0189,0.1312,Equivalent,Original,2,Hardwood
-823,bur oak,Quercus macrocarpa,quermacr,160,0.1455,0.1393,-0.0062,0.1572,Equivalent,Original,2,Hardwood
-833,northern red oak,Quercus rubra,querrubr,539,0.1801,0.2021,0.022,0.1709,Equivalent,Original,2,Hardwood
-837,black oak,Quercus velutina,quervelu,190,0.2039,0.1798,-0.0241,0.1691,Equivalent,Original,2,Hardwood
-99996,S-I-H,S_Intolerant hardwood,s_inhard,157,0.0468,0.0584,0.0116,0.0701,Equivalent,Original,2,Hardwood
-99995,S-T-H,S_Tolerant hardwood,s_tohard,92,0.087,0.0436,-0.0434,0.0953,Not equivalent,Original,4,Hardwood
-241,northern white-cedar,Thuja occidentalis,thujocci,336,0.1339,0.367,0.2331,0.2132,Not equivalent,Original,4,Conifer
-951,American basswood,Tilia americana,tiliamer,623,0.1526,0.1577,0.0051,0.1724,Equivalent,Original,4,Hardwood
-261,eastern hemlock,Tsuga canadensis,tsugcana,279,0.1326,0.2385,0.1058,0.1641,Not equivalent,Original,5,Conifer
-972,American elm,Ulmus americana,ulmuamer,582,0.1468,0.1135,-0.0333,0.1926,Equivalent,Original,3,Hardwood
-12,balsam fir,Abies balsamea,abiebals,1152,0.2079,0.1169,-0.091,0.1617,Not equivalent,Adjusted,5,Conifer
-313,boxelder,Acer negundo,acernegu,153,0.1686,0.1155,-0.0531,0.1557,Equivalent,Adjusted,3,Hardwood
-316,red maple,Acer rubrum,acerrubr,1983,0.1739,0.1443,-0.0295,0.1407,Equivalent,Adjusted,3,Hardwood
-318,sugar maple,Acer saccharum,acersacc,1898,0.2111,0.1811,-0.0299,0.1316,Equivalent,Adjusted,5,Hardwood
-371,yellow birch,Betula alleghaniensis,betualle,290,0.1086,0.1064,-0.0023,0.0954,Equivalent,Adjusted,3,Hardwood
-375,paper birch,Betula papyrifera,betupapy,474,0.1415,0.0908,-0.0507,0.1198,Equivalent,Adjusted,2,Hardwood
-402,bitternut hickory,Carya cordiformis,carycord,182,0.1141,0.116,0.0019,0.1179,Equivalent,Adjusted,2,Hardwood
-407,shagbark hickory,Carya ovata,caryovat,165,0.1194,0.1026,-0.0167,0.0886,Equivalent,Adjusted,3,Hardwood
-541,white ash,Fraxinus americana,fraxamer,375,0.1399,0.0979,-0.0421,0.1254,Equivalent,Adjusted,4,Hardwood
-543,black ash,Fraxinus nigra,fraxnigr,669,0.1741,0.151,-0.0231,0.1277,Equivalent,Adjusted,4,Hardwood
-544,green ash,Fraxinus pennsylvanica,fraxpenn,254,0.1599,0.121,-0.0388,0.1541,Equivalent,Adjusted,3,Hardwood
-99994,L-I-C,L_Intolerant conifer,l_inconi,32,0.1777,0.1108,-0.0668,0.1265,Not equivalent,Adjusted,2,Conifer
-99993,L-I-H,L_Intolerant hardwood,l_inhard,23,0.2392,0.2472,0.0081,0.2452,Equivalent,Adjusted,1,Hardwood
-99991,L-T-H,L_Tolerant hardwood,l_tohard,91,0.1248,0.0896,-0.0352,0.0825,Not equivalent,Adjusted,4,Hardwood
-71,tamarack (native),Larix laricina,larilari,260,0.1935,0.1649,-0.0286,0.1537,Equivalent,Adjusted,1,Conifer
-701,eastern hophornbeam,Ostrya virginiana,ostrvirg,655,0.0905,0.0544,-0.0361,0.0863,Equivalent,Adjusted,4,Hardwood
-94,white spruce,Picea glauca,piceglau,208,0.1824,0.1148,-0.0676,0.1368,Not equivalent,Adjusted,4,Conifer
-95,black spruce,Picea mariana,picemari,329,0.1849,0.1482,-0.0367,0.1098,Equivalent,Adjusted,3,Conifer
-105,jack pine,Pinus banksiana,pinubank,204,0.2002,0.1679,-0.0324,0.2005,Equivalent,Adjusted,1,Conifer
-125,red pine,Pinus resinosa,pinuresi,389,0.3,0.3483,0.0483,0.1855,Equivalent,Adjusted,2,Conifer
-129,eastern white pine,Pinus strobus,pinustro,530,0.236,0.2178,-0.0182,0.1745,Equivalent,Adjusted,3,Conifer
-743,bigtooth aspen,Populus grandidentata,popugran,340,0.2446,0.1683,-0.0763,0.1976,Equivalent,Adjusted,1,Hardwood
-746,quaking aspen,Populus tremuloides,poputrem,1139,0.2167,0.1816,-0.0351,0.1756,Equivalent,Adjusted,1,Hardwood
-762,black cherry,Prunus serotina,prunsero,569,0.0845,0.0654,-0.0191,0.0755,Equivalent,Adjusted,3,Hardwood
-802,white oak,Quercus alba,queralba,367,0.1842,0.1444,-0.0398,0.1811,Equivalent,Adjusted,3,Hardwood
-809,northern pin oak,Quercus ellipsoidalis,querelli,296,0.158,0.1359,-0.0221,0.1258,Equivalent,Adjusted,2,Hardwood
-823,bur oak,Quercus macrocarpa,quermacr,157,0.163,0.1459,-0.0171,0.1881,Equivalent,Adjusted,2,Hardwood
-833,northern red oak,Quercus rubra,querrubr,527,0.1847,0.1921,0.0074,0.1534,Equivalent,Adjusted,2,Hardwood
-837,black oak,Quercus velutina,quervelu,168,0.2339,0.1818,-0.0521,0.1545,Equivalent,Adjusted,2,Hardwood
-99996,S-I-H,S_Intolerant hardwood,s_inhard,164,0.0491,0.0579,0.0088,0.0678,Equivalent,Adjusted,2,Hardwood
-99995,S-T-H,S_Tolerant hardwood,s_tohard,92,0.0929,0.0436,-0.0493,0.0954,Not equivalent,Adjusted,4,Hardwood
-241,northern white-cedar,Thuja occidentalis,thujocci,346,0.3215,0.3699,0.0484,0.2055,Equivalent,Adjusted,4,Conifer
-951,American basswood,Tilia americana,tiliamer,635,0.193,0.1601,-0.0329,0.1733,Equivalent,Adjusted,4,Hardwood
-261,eastern hemlock,Tsuga canadensis,tsugcana,282,0.2597,0.2326,-0.0271,0.1812,Equivalent,Adjusted,5,Conifer
-972,American elm,Ulmus americana,ulmuamer,583,0.1483,0.1146,-0.0337,0.1922,Equivalent,Adjusted,3,Hardwood
+SPCD,Common_name,Scientific_name,SPECIES,N,Mean_LANDIS,Mean_FIA,Mean_bias,SD_bias,TOST,Source,Shade_tolerance,Type,Calibration
+12,balsam fir,Abies balsamea,abiebals,1149,0.3372,0.1168,-0.2204,0.2159,Not equivalent,Original,5,Conifer,Calibrated
+313,boxelder,Acer negundo,acernegu,159,0.1643,0.1133,-0.0511,0.1489,Equivalent,Original,3,Hardwood,Not-calibrated
+316,red maple,Acer rubrum,acerrubr,1931,0.16,0.1437,-0.0163,0.1439,Equivalent,Original,3,Hardwood,Not-calibrated
+318,sugar maple,Acer saccharum,acersacc,1821,0.1696,0.182,0.0124,0.1469,Equivalent,Original,5,Hardwood,Not-calibrated
+371,yellow birch,Betula alleghaniensis,betualle,324,0.0948,0.1036,0.0088,0.094,Equivalent,Original,3,Hardwood,Not-calibrated
+375,paper birch,Betula papyrifera,betupapy,468,0.1261,0.0889,-0.0372,0.1067,Equivalent,Original,2,Hardwood,Not-calibrated
+402,bitternut hickory,Carya cordiformis,carycord,191,0.1107,0.1144,0.0037,0.1204,Equivalent,Original,2,Hardwood,Not-calibrated
+407,shagbark hickory,Carya ovata,caryovat,168,0.1004,0.1002,-0.0001,0.1011,Equivalent,Original,3,Hardwood,Not-calibrated
+541,white ash,Fraxinus americana,fraxamer,367,0.1316,0.0993,-0.0323,0.1293,Equivalent,Original,4,Hardwood,Not-calibrated
+543,black ash,Fraxinus nigra,fraxnigr,651,0.1587,0.1505,-0.0081,0.1262,Equivalent,Original,4,Hardwood,Not-calibrated
+544,green ash,Fraxinus pennsylvanica,fraxpenn,253,0.1543,0.1195,-0.0349,0.1549,Equivalent,Original,3,Hardwood,Not-calibrated
+99994,L-I-C,L_Intolerant conifer,l_inconi,35,0.1675,0.103,-0.0644,0.1159,Not equivalent,Original,2,Conifer,Not-calibrated
+99993,L-I-H,L_Intolerant hardwood,l_inhard,22,0.2394,0.2231,-0.0163,0.2135,Equivalent,Original,1,Hardwood,Not-calibrated
+99991,L-T-H,L_Tolerant hardwood,l_tohard,91,0.1065,0.0898,-0.0167,0.0948,Equivalent,Original,4,Hardwood,Not-calibrated
+71,tamarack (native),Larix laricina,larilari,236,0.1763,0.1689,-0.0073,0.16,Equivalent,Original,1,Conifer,Not-calibrated
+701,eastern hophornbeam,Ostrya virginiana,ostrvirg,660,0.1672,0.0541,-0.1131,0.1125,Not equivalent,Original,4,Hardwood,Calibrated
+94,white spruce,Picea glauca,piceglau,196,0.1717,0.1177,-0.054,0.1461,Equivalent,Original,4,Conifer,Not-calibrated
+95,black spruce,Picea mariana,picemari,320,0.2456,0.1485,-0.0972,0.1478,Not equivalent,Original,3,Conifer,Calibrated
+105,jack pine,Pinus banksiana,pinubank,200,0.2946,0.1655,-0.1291,0.2168,Not equivalent,Original,1,Conifer,Calibrated
+125,red pine,Pinus resinosa,pinuresi,379,0.2879,0.3501,0.0622,0.1918,Equivalent,Original,2,Conifer,Not-calibrated
+129,eastern white pine,Pinus strobus,pinustro,522,0.2132,0.2211,0.0078,0.1975,Equivalent,Original,3,Conifer,Not-calibrated
+743,bigtooth aspen,Populus grandidentata,popugran,319,0.2311,0.171,-0.0601,0.2073,Equivalent,Original,1,Hardwood,Not-calibrated
+746,quaking aspen,Populus tremuloides,poputrem,1104,0.3375,0.1824,-0.1551,0.2324,Not equivalent,Original,1,Hardwood,Calibrated
+762,black cherry,Prunus serotina,prunsero,565,0.1132,0.0673,-0.0459,0.108,Equivalent,Original,3,Hardwood,Calibrated
+802,white oak,Quercus alba,queralba,365,0.0722,0.1506,0.0784,0.123,Not equivalent,Original,3,Hardwood,Calibrated
+809,northern pin oak,Quercus ellipsoidalis,querelli,296,0.1566,0.1377,-0.0189,0.1312,Equivalent,Original,2,Hardwood,Not-calibrated
+823,bur oak,Quercus macrocarpa,quermacr,160,0.1455,0.1393,-0.0062,0.1572,Equivalent,Original,2,Hardwood,Not-calibrated
+833,northern red oak,Quercus rubra,querrubr,539,0.1801,0.2021,0.022,0.1709,Equivalent,Original,2,Hardwood,Not-calibrated
+837,black oak,Quercus velutina,quervelu,190,0.2039,0.1798,-0.0241,0.1691,Equivalent,Original,2,Hardwood,Not-calibrated
+99996,S-I-H,S_Intolerant hardwood,s_inhard,157,0.0468,0.0584,0.0116,0.0701,Equivalent,Original,2,Hardwood,Not-calibrated
+99995,S-T-H,S_Tolerant hardwood,s_tohard,92,0.087,0.0436,-0.0434,0.0953,Not equivalent,Original,4,Hardwood,Not-calibrated
+241,northern white-cedar,Thuja occidentalis,thujocci,336,0.1339,0.367,0.2331,0.2132,Not equivalent,Original,4,Conifer,Calibrated
+951,American basswood,Tilia americana,tiliamer,623,0.1526,0.1577,0.0051,0.1724,Equivalent,Original,4,Hardwood,Not-calibrated
+261,eastern hemlock,Tsuga canadensis,tsugcana,279,0.1326,0.2385,0.1058,0.1641,Not equivalent,Original,5,Conifer,Calibrated
+972,American elm,Ulmus americana,ulmuamer,582,0.1468,0.1135,-0.0333,0.1926,Equivalent,Original,3,Hardwood,Not-calibrated
+12,balsam fir,Abies balsamea,abiebals,1144,0.2109,0.1172,-0.0937,0.1774,Equivalent,Adjusted,5,Conifer,Calibrated
+313,boxelder,Acer negundo,acernegu,160,0.1619,0.1117,-0.0502,0.1509,Equivalent,Adjusted,3,Hardwood,Not-calibrated
+316,red maple,Acer rubrum,acerrubr,1964,0.1748,0.1434,-0.0314,0.1393,Equivalent,Adjusted,3,Hardwood,Not-calibrated
+318,sugar maple,Acer saccharum,acersacc,1881,0.2124,0.1816,-0.0307,0.1321,Equivalent,Adjusted,5,Hardwood,Not-calibrated
+371,yellow birch,Betula alleghaniensis,betualle,296,0.1076,0.103,-0.0047,0.0918,Equivalent,Adjusted,3,Hardwood,Not-calibrated
+375,paper birch,Betula papyrifera,betupapy,471,0.1388,0.092,-0.0468,0.1221,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+402,bitternut hickory,Carya cordiformis,carycord,182,0.1156,0.12,0.0045,0.1293,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+407,shagbark hickory,Carya ovata,caryovat,171,0.1206,0.1019,-0.0187,0.0898,Equivalent,Adjusted,3,Hardwood,Not-calibrated
+541,white ash,Fraxinus americana,fraxamer,369,0.1406,0.1,-0.0405,0.131,Equivalent,Adjusted,4,Hardwood,Not-calibrated
+543,black ash,Fraxinus nigra,fraxnigr,673,0.1708,0.1496,-0.0212,0.1257,Equivalent,Adjusted,4,Hardwood,Not-calibrated
+544,green ash,Fraxinus pennsylvanica,fraxpenn,252,0.1589,0.1213,-0.0376,0.1565,Equivalent,Adjusted,3,Hardwood,Not-calibrated
+99994,L-I-C,L_Intolerant conifer,l_inconi,35,0.1733,0.103,-0.0703,0.1236,Equivalent,Adjusted,2,Conifer,Not-calibrated
+99993,L-I-H,L_Intolerant hardwood,l_inhard,23,0.2358,0.2472,0.0115,0.2537,Equivalent,Adjusted,1,Hardwood,Not-calibrated
+99991,L-T-H,L_Tolerant hardwood,l_tohard,92,0.1263,0.0889,-0.0374,0.0845,Equivalent,Adjusted,4,Hardwood,Not-calibrated
+71,tamarack (native),Larix laricina,larilari,249,0.1935,0.1657,-0.0278,0.1551,Equivalent,Adjusted,1,Conifer,Not-calibrated
+701,eastern hophornbeam,Ostrya virginiana,ostrvirg,658,0.1108,0.0541,-0.0567,0.1469,Equivalent,Adjusted,4,Hardwood,Calibrated
+94,white spruce,Picea glauca,piceglau,203,0.1828,0.1148,-0.068,0.1458,Equivalent,Adjusted,4,Conifer,Not-calibrated
+95,black spruce,Picea mariana,picemari,323,0.2349,0.1489,-0.086,0.1463,Equivalent,Adjusted,3,Conifer,Calibrated
+105,jack pine,Pinus banksiana,pinubank,198,0.2267,0.1682,-0.0585,0.2096,Equivalent,Adjusted,1,Conifer,Calibrated
+125,red pine,Pinus resinosa,pinuresi,387,0.2996,0.3469,0.0473,0.1853,Equivalent,Adjusted,2,Conifer,Not-calibrated
+129,eastern white pine,Pinus strobus,pinustro,530,0.2384,0.2175,-0.0209,0.1697,Equivalent,Adjusted,3,Conifer,Not-calibrated
+743,bigtooth aspen,Populus grandidentata,popugran,343,0.2428,0.1717,-0.0711,0.2031,Equivalent,Adjusted,1,Hardwood,Not-calibrated
+746,quaking aspen,Populus tremuloides,poputrem,1152,0.212,0.1814,-0.0306,0.1912,Equivalent,Adjusted,1,Hardwood,Calibrated
+762,black cherry,Prunus serotina,prunsero,568,0.09,0.0673,-0.0228,0.0889,Equivalent,Adjusted,3,Hardwood,Calibrated
+802,white oak,Quercus alba,queralba,377,0.0879,0.1511,0.0632,0.1474,Equivalent,Adjusted,3,Hardwood,Calibrated
+809,northern pin oak,Quercus ellipsoidalis,querelli,291,0.1591,0.1386,-0.0205,0.1275,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+823,bur oak,Quercus macrocarpa,quermacr,149,0.1699,0.1477,-0.0221,0.1868,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+833,northern red oak,Quercus rubra,querrubr,537,0.1837,0.1881,0.0044,0.1445,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+837,black oak,Quercus velutina,quervelu,171,0.2354,0.1756,-0.0599,0.1438,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+99996,S-I-H,S_Intolerant hardwood,s_inhard,164,0.0498,0.0586,0.0088,0.0687,Equivalent,Adjusted,2,Hardwood,Not-calibrated
+99995,S-T-H,S_Tolerant hardwood,s_tohard,92,0.0937,0.0436,-0.0501,0.0955,Equivalent,Adjusted,4,Hardwood,Not-calibrated
+241,northern white-cedar,Thuja occidentalis,thujocci,352,0.2961,0.3641,0.0681,0.215,Equivalent,Adjusted,4,Conifer,Calibrated
+951,American basswood,Tilia americana,tiliamer,636,0.1938,0.1596,-0.0342,0.1737,Equivalent,Adjusted,4,Hardwood,Not-calibrated
+261,eastern hemlock,Tsuga canadensis,tsugcana,274,0.1638,0.2437,0.0799,0.1685,Equivalent,Adjusted,5,Conifer,Calibrated
+972,American elm,Ulmus americana,ulmuamer,585,0.1468,0.1123,-0.0345,0.1907,Equivalent,Adjusted,3,Hardwood,Not-calibrated

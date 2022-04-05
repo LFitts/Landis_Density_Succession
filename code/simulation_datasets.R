@@ -115,11 +115,11 @@ WI_TREE$SPCD<-ifelse(WI_TREE$SPCD ==391,701,
 #'
 #plt_list <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
 
-#plt_list_s1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
-#plt_list_s2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
+plt_list_s1 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 1, 1), sep='_'))
+plt_list_s2 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 2, 2), sep='_'))
 plt_list_s3 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 3, 3), sep='_')) #########change depending on subplot to use
 plt_list_s4 <- plt_list %>% mutate(SUBKEY = str_c(KEY, t0, str_sub(subplot_list, 4, 4), sep='_'))
-plt_list<-rbind(plt_list_s3, plt_list_s4)
+plt_list<-rbind(plt_list_s1, plt_list_s2, plt_list_s3, plt_list_s4)
 #'
 #'
 #'
@@ -582,4 +582,13 @@ for (ts in unique(mapKey$TIMESTEP)[order(unique(mapKey$TIMESTEP))])
   writeRaster(sub_map, paste0("simulations/s3_s4/landuse-P99-", ts, ".img"), NAflag=-9999, overwrite=T, datatype='INT2S') ############ update output location
 }
 
-#
+################
+
+#' General information, species abundance
+#' 
+abundance_trees<- WI_TREE %>% dplyr::filter (DIA >=5) %>% 
+  group_by(Name)%>% # All species in the plots used for this study
+  summarise(abundance=n(), # number of trees sampled
+            N=length(unique(SUBKEY))) #n plots in which the tree is present
+#'
+

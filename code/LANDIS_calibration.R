@@ -6,7 +6,7 @@
 #' From FIA diameter growth estimates
 #'
 library(tidyverse)
-s2_species_wide_SUB <- read_csv('./output/s2_species_wide_sub.csv')
+s2_species_wide_SUB <- read_csv('./output/s1s2_species_wide_sub.csv')
 
 speciesSet = c('abiebals', 'poputrem', 'pinuresi', 'thujocci', 'pinubank', 'prunsero',
                'picemari', 'queralba', 'ostrvirg', 'tsugcana')
@@ -37,7 +37,7 @@ for (sp in speciesSet){
     geom_abline(slope = 1, intercept = 0) +
     geom_vline(aes(xintercept = 12.7, colour = 'red')) +
     geom_hline(aes(yintercept = 12.7, colour = 'red')) +
-    facet_wrap(vars(ECO_PROVINCE)) +
+   facet_wrap(vars(ECO_PROVINCE)) +
     theme_classic()
   ggsave(paste0('./output/CalibrationTest/', sp, '_DIA.tiff'))
   
@@ -52,8 +52,73 @@ for (sp in speciesSet){
     theme_classic()
   ggsave(paste0('./output/CalibrationTest/', sp, '_DENS.tiff'))
 }
-
 #'
+#' Create the same graphs but only by species, not by ecoregion
+#' 
+speciesSet = c('abiebals', 'poputrem', 'pinuresi', 'thujocci', 'pinubank', 'prunsero',
+               'picemari', 'queralba', 'ostrvirg', 'tsugcana')
+#' 
+for (sp in speciesSet){
+  spMaxBA <- speciesSumm %>% filter(Species == sp) %>% dplyr::select(maxBA) %>% pull()
+  ggplot(s2_species_wide_SUB %>% filter(Species == sp), aes(totalBA_FIA, totalBA_LANDIS)) +
+    geom_point() +
+    scale_x_continuous(limits = c(0, spMaxBA)) +
+    scale_y_continuous(limits = c(0, spMaxBA)) +
+    coord_fixed() +
+    geom_abline(slope = 1, intercept = 0) +
+    #facet_wrap(vars(ECO_PROVINCE)) +
+    theme_classic()
+  ggsave(paste0('./output/CalibrationTest/', sp, '_BA_all.tiff'))
+  
+  spMaxDIA <- speciesSumm %>% filter(Species == sp) %>% dplyr::select(maxDIA) %>% pull()
+  ggplot(s2_species_wide_SUB %>% filter(Species == sp), aes(meanDIA_FIA, meanDIA_LANDIS)) +
+    geom_point() +
+    scale_x_continuous(limits = c(0, spMaxDIA)) +
+    scale_y_continuous(limits = c(0, spMaxDIA)) +
+    coord_fixed() +
+    geom_abline(slope = 1, intercept = 0) +
+    geom_vline(aes(xintercept = 12.7, colour = 'red')) +
+    geom_hline(aes(yintercept = 12.7, colour = 'red')) +
+   #facet_wrap(vars(ECO_PROVINCE)) +
+    theme_classic()+theme(legend.position = "none")
+  ggsave(paste0('./output/CalibrationTest/', sp, '_DIA_all.tiff'))
+  
+  spMaxDENS <- speciesSumm %>% filter(Species == sp) %>% dplyr::select(maxDENS) %>% pull()
+  ggplot(s2_species_wide_SUB %>% filter(Species == sp), aes(density_FIA, density_LANDIS)) +
+    geom_point() +
+    scale_x_continuous(limits = c(0, spMaxDENS)) +
+    scale_y_continuous(limits = c(0, spMaxDENS)) +
+    coord_fixed() +
+    geom_abline(slope = 1, intercept = 0) +
+   # facet_wrap(vars(ECO_PROVINCE)) +
+    theme_classic()
+  ggsave(paste0('./output/CalibrationTest/', sp, '_DENS_all.tiff'))
+}
+#'
+#
+#' Now do one figure for all species
+speciesSet = c('abiebals', 'poputrem', 'thujocci', 'pinubank', 'prunsero','picemari', 'queralba', 'ostrvirg', 'tsugcana')
+#' 
+# New facet label names for species variable
+speciesSet2 <- c("Abies balsamea", "Populus tremuloides", "Thuja occidentalis", "Pinus banksiana", 
+             "Prunus serotina", "Picea mariana", "Quercus alba", "Ostrya virginiana" , "Tsuga canadensis")
+
+s2_species_wide_SUB<-s2_species_wide_SUB%>% mutate(Species = recode(Species, 'abiebals'='Abies balsamea', 'poputrem'='Populus tremuloides', 'thujocci'='Thuja occidentalis', 'pinubank'='Pinus banksiana', 'prunsero'='Prunus serotina','picemari'='Picea mariana', 'queralba'='Quercus alba', 'ostrvirg'='Ostrya virginiana', 'tsugcana'='Tsuga canadensis'))
+#' 
+spMaxDIA <- speciesSumm %>% filter(Species == speciesSet) %>% dplyr::select(maxDIA) %>% pull()
+ggplot(s2_species_wide_SUB %>% filter(Species == speciesSet2), aes(meanDIA_FIA, meanDIA_LANDIS)) +
+  geom_point() +
+  scale_x_continuous(limits = c(0, spMaxDIA)) +
+  scale_y_continuous(limits = c(0, spMaxDIA)) +
+  coord_fixed() +
+  geom_abline(slope = 1, intercept = 0) +
+  geom_vline(aes(xintercept = 12.7, colour = 'red')) +
+  geom_hline(aes(yintercept = 12.7, colour = 'red')) +
+  facet_wrap(vars(Species), ncol=3) +
+  theme_classic()+theme(legend.position = "none")+
+  labs( x = "Mean diameter FIA (cm)", y =" Mean diameter LANDIS (cm)")
+ggsave(paste0('./output/CalibrationTest/', 's1s2_DIA.tiff'))
+
 #' ##################################################################################
 # 2. Create table: Calibrate Species Ecoregion diameter table ----
 #'###################################################################################

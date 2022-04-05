@@ -10,8 +10,8 @@ StartYear	2000
 SeedingAlgorithm	DensitySeeding
 
 
-InitialCommunities	Initial_Community_adjusted2.txt
-InitialCommunitiesMap	initialcommunity_adjusted2.img
+InitialCommunities	Initial_Community_P99.txt
+InitialCommunitiesMap	initialcommunity_P99.img
 
 
 DensitySpeciesParameters	density_speciesparameters.txt
@@ -26,7 +26,7 @@ DynamicEcoregionFile	DynamicEcoregionInput.txt
 DynamicInputFile	establishment_probability.txt
 
 
-DiameterInputFile	Ecoregion_diameter_table_adjusted2.txt
+DiameterInputFile	Ecoregion_diameter_table_P99.txt
 
 
 >> DisturbanceReductions	disturbance_reductions.txt
