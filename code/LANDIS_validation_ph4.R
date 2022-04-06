@@ -452,7 +452,7 @@ library(tidyverse)
 #install.packages("TOSTER")
 library(TOSTER)
 
-MV_KEY <- read_csv('simulations/s3_s4/output/MAPVALUE_KEY_P99.csv')
+MV_KEY <- read.csv('simulations/s3_s4/output/MAPVALUE_KEY_P99.csv')
 MV_KEY <- MV_KEY %>% rowwise() %>% mutate(SUBKEY = paste(str_split(PLT_KEY, '_', simplify=T)[,c(1,2,3,5)], collapse='_'))
 
 #' #################################################
@@ -701,8 +701,82 @@ for(i in 1:length(species_vec)){
   tost_sp_result_BA[[tempkey]] <- tostTest
 }
 
-write.table(sp_result_BA, 'clipboard', sep = '\t', row.names = F)
+#write.table(sp_result_BA, 'clipboard', sep = '\t', row.names = F)
 
 #'
-#write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3/results/tost_sp_ba_result_phase4_low.CSV')
+write.csv( sp_result_BA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3_S4/results/tost_sp_ba_result_P99.CSV')
+#'
+#' ###################################################################
+#' 
+# Equivalence test SPECIES density ####
+#'
+species_vec<-unique(s3_species_wide_SUB$Species)
+sp_result_D <- tibble()
+tost_sp_result_D <- list()
+#'
+for(i in 1:length(species_vec)){
+  tempkey=species_vec[i]
+  species<-s3_species_wide_SUB %>% filter(Species==tempkey)
+  #
+  tostTest <- dataTOSTpaired(species, pair1 = 'density_LANDIS', pair2 = 'density_FIA',
+                             low_eqbound = -0.5, high_eqbound = 0.5, desc=T, plots=T)
+  
+  result <- tibble(ECO_PROVINCE = tempkey,
+                   EPSILON = 0.5,
+                   p0 = tostTest$tost$asDF[1,'p'],
+                   p1 = tostTest$tost$asDF[2,'p'],
+                   p2 = tostTest$tost$asDF[3,'p'],
+                   LANDIS_MEAN = tostTest$desc$asDF[1,'m'],
+                   FIA_MEAN = tostTest$desc$asDF[2,'m'], 
+                   MEAN_BIAS = mean(species$density_FIA-species$density_LANDIS),
+                   SD_BIAS = sd(species$density_FIA-species$density_LANDIS),
+                   N= length(species$density_FIA)) %>% 
+    mutate(NULLHYP = if_else((p1 < 0.05) & (p2 < 0.05), 'REJECTED', 'NOT REJECTED'))
+  
+  sp_result_D <- sp_result_D %>% bind_rows(result)
+  
+  tost_sp_result_D[[tempkey]] <- tostTest
+}
+
+#write.table(sp_result_D, 'clipboard', sep = '\t', row.names = F)
+
+#'
+#write.csv( sp_result_D,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3_s4/results/tost_sp_density_P99.CSV')
+#'
+#' ###########################################################################
+#' 
+# Equivalence test SPECIES mean diameter ####
+#'
+species_vec<-unique(s3_species_wide_SUB$Species)
+sp_result_DIA <- tibble()
+tost_sp_result_DIA <- list()
+#'
+for(i in 1:length(species_vec)){
+  tempkey=species_vec[i]
+  species<-s3_species_wide_SUB %>% filter(Species==tempkey)
+  #
+  tostTest <- dataTOSTpaired(species, pair1 = 'meanDIA_LANDIS', pair2 = 'meanDIA_FIA',
+                             low_eqbound = -0.5, high_eqbound = 0.5, desc=T, plots=T)
+  
+  result <- tibble(ECO_PROVINCE = tempkey,
+                   EPSILON = 0.5,
+                   p0 = tostTest$tost$asDF[1,'p'],
+                   p1 = tostTest$tost$asDF[2,'p'],
+                   p2 = tostTest$tost$asDF[3,'p'],
+                   LANDIS_MEAN = tostTest$desc$asDF[1,'m'],
+                   FIA_MEAN = tostTest$desc$asDF[2,'m'], 
+                   MEAN_BIAS = mean(species$meanDIA_FIA-species$meanDIA_LANDIS),
+                   SD_BIAS = sd(species$meanDIA_FIA-species$meanDIA_LANDIS),
+                   N= length(species$meanDIA_FIA)) %>% 
+    mutate(NULLHYP = if_else((p1 < 0.05) & (p2 < 0.05), 'REJECTED', 'NOT REJECTED'))
+  
+  sp_result_DIA <- sp_result_DIA %>% bind_rows(result)
+  
+  tost_sp_result_DIA[[tempkey]] <- tostTest
+}
+
+#write.table(sp_result_DIA, 'clipboard', sep = '\t', row.names = F)
+
+#'
+write.csv( sp_result_DIA,'C:/Users/fitts010/Desktop/ch3_paper/Landis_Density_Succession/simulations/s3_S4/results/tost_sp_DIA_result_P99.CSV')
 #'
